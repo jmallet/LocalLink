@@ -5,9 +5,11 @@ import HeroSection from './components/HeroSection.vue'
 import SearchFilters from './components/SearchFilters.vue'
 import BusinessCard from './components/BusinessCard.vue'
 import ContactModal from './components/ContactModal.vue'
+import AboutPage from './components/AboutPage.vue'
 import { mockBusinesses } from './data/mockBusinesses'
 import type { Business, Category } from './types'
 
+const currentPage = ref<'home' | 'about'>('home')
 const searchQuery = ref('')
 const selectedCategory = ref<Category>('all')
 const isModalOpen = ref(false)
@@ -41,40 +43,49 @@ const closeModal = () => {
   isModalOpen.value = false
   selectedBusiness.value = null
 }
+
+const navigateToPage = (page: 'home' | 'about') => {
+  currentPage.value = page
+}
 </script>
 
 <template>
   <div class="app">
-    <NavigationBar />
-    <HeroSection />
-    <SearchFilters
-      @update:search="searchQuery = $event"
-      @update:category="selectedCategory = $event"
-    />
+    <NavigationBar :current-page="currentPage" @navigate="navigateToPage" />
 
-    <main class="main-content">
-      <div class="results-header">
-        <h2 class="results-title">
-          {{ filteredBusinesses.length }}
-          {{ filteredBusinesses.length > 1 ? 'entreprises trouvées' : 'entreprise trouvée' }}
-        </h2>
-      </div>
+    <AboutPage v-if="currentPage === 'about'" />
 
-      <div v-if="filteredBusinesses.length > 0" class="business-grid">
-        <BusinessCard
-          v-for="business in filteredBusinesses"
-          :key="business.id"
-          :business="business"
-          @contact="handleContactBusiness"
-        />
-      </div>
+    <template v-else>
+      <HeroSection />
+      <SearchFilters
+        @update:search="searchQuery = $event"
+        @update:category="selectedCategory = $event"
+      />
 
-      <div v-else class="empty-state">
-        <span class="empty-icon">🔍</span>
-        <h3>Aucune entreprise trouvée</h3>
-        <p>Essayez de modifier vos critères de recherche</p>
-      </div>
-    </main>
+      <main class="main-content">
+        <div class="results-header">
+          <h2 class="results-title">
+            {{ filteredBusinesses.length }}
+            {{ filteredBusinesses.length > 1 ? 'entreprises trouvées' : 'entreprise trouvée' }}
+          </h2>
+        </div>
+
+        <div v-if="filteredBusinesses.length > 0" class="business-grid">
+          <BusinessCard
+            v-for="business in filteredBusinesses"
+            :key="business.id"
+            :business="business"
+            @contact="handleContactBusiness"
+          />
+        </div>
+
+        <div v-else class="empty-state">
+          <span class="empty-icon">🔍</span>
+          <h3>Aucune entreprise trouvée</h3>
+          <p>Essayez de modifier vos critères de recherche</p>
+        </div>
+      </main>
+    </template>
 
     <ContactModal
       :business="selectedBusiness"
