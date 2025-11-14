@@ -6,10 +6,12 @@ import SearchFilters from './components/SearchFilters.vue'
 import BusinessCard from './components/BusinessCard.vue'
 import ContactModal from './components/ContactModal.vue'
 import AboutPage from './components/AboutPage.vue'
+import SignupModal from './components/SignupModal.vue'
 import { mockBusinesses } from './data/mockBusinesses'
 import type { Business, Category } from './types'
 
 const currentPage = ref<'home' | 'about'>('home')
+const isSignupOpen = ref(false)
 const searchQuery = ref('')
 const selectedCategory = ref<Category>('all')
 const isModalOpen = ref(false)
@@ -47,11 +49,19 @@ const closeModal = () => {
 const navigateToPage = (page: 'home' | 'about') => {
   currentPage.value = page
 }
+
+const openSignup = () => {
+  isSignupOpen.value = true
+}
+
+const closeSignup = () => {
+  isSignupOpen.value = false
+}
 </script>
 
 <template>
   <div class="app">
-    <NavigationBar :current-page="currentPage" @navigate="navigateToPage" />
+    <NavigationBar :current-page="currentPage" @navigate="navigateToPage" @open-signup="openSignup" />
 
     <AboutPage v-if="currentPage === 'about'" />
 
@@ -92,6 +102,8 @@ const navigateToPage = (page: 'home' | 'about') => {
       :is-open="isModalOpen"
       @close="closeModal"
     />
+
+    <SignupModal v-if="isSignupOpen" @close="closeSignup" />
   </div>
 </template>
 

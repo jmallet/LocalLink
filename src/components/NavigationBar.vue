@@ -7,6 +7,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'navigate', page: 'home' | 'about'): void
+  (e: 'open-signup'): void
 }>()
 
 const mobileMenuOpen = ref(false)
@@ -38,7 +39,7 @@ const handleNavigate = (page: 'home' | 'about') => {
 
       <div class="nav-actions">
         <button class="btn-secondary">Connexion</button>
-        <button class="btn-primary">Créer un compte</button>
+        <button class="btn-primary" @click="emit('open-signup')">Créer un compte</button>
       </div>
 
       <button class="mobile-menu-btn" @click="toggleMobileMenu">
