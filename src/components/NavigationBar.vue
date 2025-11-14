@@ -31,9 +31,7 @@ const handleNavigate = (page: 'home' | 'about') => {
       </div>
 
       <div class="nav-links" :class="{ 'mobile-open': mobileMenuOpen }">
-        <a @click.prevent="handleNavigate('home')" href="#" :class="['nav-link', { active: currentPage === 'home' }]">Découvrir</a>
-        <a href="#" class="nav-link">Mes favoris</a>
-        <a href="#" class="nav-link">Messages</a>
+        <a @click.prevent="handleNavigate('home')" href="#" :class="['nav-link', { active: currentPage === 'home' }]">Accueil</a>
         <a @click.prevent="handleNavigate('about')" href="#" :class="['nav-link', { active: currentPage === 'about' }]">À propos</a>
       </div>
 
