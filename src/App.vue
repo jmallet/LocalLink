@@ -7,10 +7,11 @@ import BusinessCard from './components/BusinessCard.vue'
 import ContactModal from './components/ContactModal.vue'
 import AboutPage from './components/AboutPage.vue'
 import SignupModal from './components/SignupModal.vue'
+import ProsLocauxPage from './components/ProsLocauxPage.vue'
 import { mockBusinesses } from './data/mockBusinesses'
 import type { Business, Category } from './types'
 
-const currentPage = ref<'home' | 'about'>('home')
+const currentPage = ref<'home' | 'about' | 'pros-locaux'>('home')
 const isSignupOpen = ref(false)
 const searchQuery = ref('')
 const selectedCategory = ref<Category>('all')
@@ -46,7 +47,7 @@ const closeModal = () => {
   selectedBusiness.value = null
 }
 
-const navigateToPage = (page: 'home' | 'about') => {
+const navigateToPage = (page: 'home' | 'about' | 'pros-locaux') => {
   currentPage.value = page
 }
 
@@ -64,6 +65,7 @@ const closeSignup = () => {
     <NavigationBar :current-page="currentPage" @navigate="navigateToPage" @open-signup="openSignup" />
 
     <AboutPage v-if="currentPage === 'about'" />
+    <ProsLocauxPage v-else-if="currentPage === 'pros-locaux'" @contact="handleContactBusiness" />
 
     <template v-else>
       <HeroSection />

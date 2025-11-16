@@ -2,11 +2,11 @@
 import { ref } from 'vue'
 
 defineProps<{
-  currentPage?: 'home' | 'about'
+  currentPage?: 'home' | 'about' | 'pros-locaux'
 }>()
 
 const emit = defineEmits<{
-  (e: 'navigate', page: 'home' | 'about'): void
+  (e: 'navigate', page: 'home' | 'about' | 'pros-locaux'): void
   (e: 'open-signup'): void
 }>()
 
@@ -16,7 +16,7 @@ const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
 }
 
-const handleNavigate = (page: 'home' | 'about') => {
+const handleNavigate = (page: 'home' | 'about' | 'pros-locaux') => {
   emit('navigate', page)
   mobileMenuOpen.value = false
 }
@@ -32,6 +32,7 @@ const handleNavigate = (page: 'home' | 'about') => {
 
       <div class="nav-links" :class="{ 'mobile-open': mobileMenuOpen }">
         <a @click.prevent="handleNavigate('home')" href="#" :class="['nav-link', { active: currentPage === 'home' }]">Accueil</a>
+        <a @click.prevent="handleNavigate('pros-locaux')" href="#" :class="['nav-link', { active: currentPage === 'pros-locaux' }]">Pros locaux</a>
         <a @click.prevent="handleNavigate('about')" href="#" :class="['nav-link', { active: currentPage === 'about' }]">À propos</a>
       </div>
 
