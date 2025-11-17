@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { isAuthenticated, signOut } from '../../stores/auth'
+import { ref, onMounted } from 'vue'
+import { isAuthenticated, signOut, user } from '../../stores/auth'
 import { navigateTo } from '../../router'
+import { supabase } from '../../lib/supabase'
 
 const mobileMenuOpen = ref(false)
+const isAdmin = ref(false)
 
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
@@ -13,6 +15,25 @@ const handleSignOut = async () => {
   await signOut()
   navigateTo({ name: 'home' })
 }
+
+async function checkAdminStatus() {
+  if (!isAuthenticated.value || !user.value) {
+    isAdmin.value = false
+    return
+  }
+
+  const { data } = await supabase
+    .from('companies')
+    .select('role')
+    .eq('user_id', user.value.id)
+    .maybeSingle()
+
+  isAdmin.value = data?.role === 'admin'
+}
+
+onMounted(() => {
+  checkAdminStatus()
+})
 </script>
 
 <template>
@@ -33,6 +54,9 @@ const handleSignOut = async () => {
 
       <div class="nav-actions">
         <template v-if="isAuthenticated">
+          <button v-if="isAdmin" class="btn-admin" @click="navigateTo({ name: 'admin' })">
+            Admin
+          </button>
           <button class="btn-secondary" @click="navigateTo({ name: 'dashboard' })">
             Dashboard
           </button>
@@ -117,7 +141,8 @@ const handleSignOut = async () => {
 }
 
 .btn-secondary,
-.btn-primary {
+.btn-primary,
+.btn-admin {
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
@@ -125,6 +150,17 @@ const handleSignOut = async () => {
   border: none;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.btn-admin {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-admin:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-secondary {
