@@ -11,6 +11,11 @@ import BlogPage from './components/pages/BlogPage.vue'
 import BlogPostPage from './components/pages/BlogPostPage.vue'
 import AboutPage from './components/pages/AboutPage.vue'
 import ContactPage from './components/pages/ContactPage.vue'
+import DashboardPage from './components/pages/DashboardPage.vue'
+import ProfilePage from './components/pages/ProfilePage.vue'
+import ProductsPage from './components/pages/ProductsPage.vue'
+import QuotesPage from './components/pages/QuotesPage.vue'
+import VisibilityPage from './components/pages/VisibilityPage.vue'
 import LoginForm from './components/auth/LoginForm.vue'
 
 const showLoginModal = ref(false)
@@ -41,7 +46,7 @@ function closeLoginModal() {
     </div>
 
     <template v-else>
-      <NavigationBar />
+      <NavigationBar v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility'].includes(currentRoute.name)" />
 
       <main>
         <HomePage v-if="currentRoute.name === 'home'" />
@@ -51,6 +56,11 @@ function closeLoginModal() {
         <BlogPostPage v-else-if="currentRoute.name === 'blog-post'" />
         <AboutPage v-else-if="currentRoute.name === 'about'" />
         <ContactPage v-else-if="currentRoute.name === 'contact'" />
+        <DashboardPage v-else-if="currentRoute.name === 'dashboard'" />
+        <ProfilePage v-else-if="currentRoute.name === 'dashboard-profile'" />
+        <ProductsPage v-else-if="currentRoute.name === 'dashboard-products'" />
+        <QuotesPage v-else-if="currentRoute.name === 'dashboard-quotes'" />
+        <VisibilityPage v-else-if="currentRoute.name === 'dashboard-visibility'" />
 
         <div v-else class="construction-container">
           <div class="construction-notice">
@@ -97,7 +107,7 @@ function closeLoginModal() {
         </div>
       </main>
 
-      <Footer />
+      <Footer v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility'].includes(currentRoute.name)" />
 
       <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
     </template>
