@@ -1,11 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { initAuth, isAuthenticated, loading } from './stores/auth'
+import { ref, watch, onMounted } from 'vue'
+import { initAuth, loading } from './stores/auth'
+import { currentRoute, navigateTo } from './router'
 import NavigationBar from './components/common/NavigationBar.vue'
+import HomePage from './components/pages/HomePage.vue'
+import LoginForm from './components/auth/LoginForm.vue'
+
+const showLoginModal = ref(false)
 
 onMounted(async () => {
   await initAuth()
 })
+
+watch(currentRoute, (route) => {
+  if (route.name === 'login') {
+    showLoginModal.value = true
+  }
+})
+
+function closeLoginModal() {
+  showLoginModal.value = false
+  if (currentRoute.value.name === 'login') {
+    navigateTo({ name: 'home' })
+  }
+}
 </script>
 
 <template>
@@ -18,74 +36,46 @@ onMounted(async () => {
     <template v-else>
       <NavigationBar />
 
-      <main class="main-container">
-        <div class="construction-notice">
-          <h1>🚧 Application en construction</h1>
-          <p>La structure complète de l'application LocalLink est en cours de développement.</p>
+      <main>
+        <HomePage v-if="currentRoute.name === 'home'" />
 
-          <div class="status-card">
-            <h2>✅ Éléments terminés:</h2>
-            <ul>
-              <li>Schéma de base de données PostgreSQL complet (7 tables)</li>
-              <li>Système d'authentification Supabase</li>
-              <li>Router et navigation</li>
-              <li>Types TypeScript</li>
-              <li>Store auth centralisé</li>
-            </ul>
-          </div>
+        <div v-else class="construction-container">
+          <div class="construction-notice">
+            <h1>Page {{ currentRoute.name }}</h1>
+            <p>Cette page est en cours de développement.</p>
 
-          <div class="status-card">
-            <h2>📋 Structure des fonctionnalités:</h2>
-            <ul>
-              <li><strong>Authentification:</strong> Inscription/Connexion avec validation SIRET/BCE</li>
-              <li><strong>Dashboard Entreprise:</strong> Profil, produits, devis, visibilité, paiements</li>
-              <li><strong>Pages Publiques:</strong> Accueil, Pros locaux, À propos, Blog, Contact</li>
-              <li><strong>Système de devis:</strong> Création, modération admin, paiement leads (10€)</li>
-              <li><strong>Visibilité:</strong> Mise en avant payante (zone locale/régionale/nationale)</li>
-              <li><strong>Admin:</strong> Validation entreprises, modération devis, gestion paiements</li>
-              <li><strong>API:</strong> 5 Edge Functions (vérification SIRET, Stripe, notifications)</li>
-            </ul>
-          </div>
+            <div class="status-card">
+              <h2>✅ Fonctionnalités actuelles :</h2>
+              <ul>
+                <li>Page d'accueil avec entreprises mises en avant</li>
+                <li>8 entreprises de test avec produits/services</li>
+                <li>3 articles de blog</li>
+                <li>3 entreprises mises en avant (boost visibilité)</li>
+                <li>Système d'authentification fonctionnel</li>
+                <li>Base de données complète avec RLS</li>
+              </ul>
+            </div>
 
-          <div class="info-card">
-            <h3>📊 Base de données</h3>
-            <p>7 tables créées avec RLS:</p>
-            <ul>
-              <li>companies (entreprises)</li>
-              <li>products_services (vitrine)</li>
-              <li>quote_requests (demandes de devis)</li>
-              <li>quote_recipients (destinataires)</li>
-              <li>visibility_boosts (mises en avant)</li>
-              <li>payments (historique)</li>
-              <li>blog_posts (articles)</li>
-            </ul>
-          </div>
+            <div class="info-card">
+              <h3>🎯 Pages disponibles :</h3>
+              <ul>
+                <li>✅ Accueil (page d'accueil avec entreprises)</li>
+                <li>⏳ Pros locaux (en développement)</li>
+                <li>⏳ À propos (en développement)</li>
+                <li>⏳ Blog (en développement)</li>
+                <li>⏳ Contact (en développement)</li>
+                <li>⏳ Dashboard (en développement)</li>
+              </ul>
+            </div>
 
-          <div class="info-card">
-            <h3>🎯 Workflow principal</h3>
-            <ol>
-              <li>Inscription avec vérification SIRET/BCE automatique</li>
-              <li>Activation profil producteur optionnelle</li>
-              <li>Création vitrine produits/services</li>
-              <li>Réception demandes de devis (payantes: 10€)</li>
-              <li>Option visibilité accrue (50-200€/semaine)</li>
-            </ol>
-          </div>
-
-          <p class="doc-link">
-            📖 Consultez <strong>PROJECT_STRUCTURE.md</strong> pour la structure complète
-          </p>
-
-          <div class="auth-status">
-            <p v-if="isAuthenticated">
-              ✅ Vous êtes connecté
-            </p>
-            <p v-else>
-              ℹ️ Non connecté
-            </p>
+            <button class="btn-back" @click="navigateTo({ name: 'home' })">
+              ← Retour à l'accueil
+            </button>
           </div>
         </div>
       </main>
+
+      <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
     </template>
   </div>
 </template>
@@ -110,6 +100,10 @@ body {
   flex-direction: column;
 }
 
+main {
+  flex: 1;
+}
+
 .loading-screen {
   min-height: 100vh;
   display: flex;
@@ -132,12 +126,10 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.main-container {
-  flex: 1;
+.construction-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 48px 24px;
-  width: 100%;
 }
 
 .construction-notice {
@@ -206,8 +198,7 @@ body {
   color: #1e40af;
 }
 
-.info-card ul,
-.info-card ol {
+.info-card ul {
   margin-left: 24px;
   color: #374151;
 }
@@ -216,22 +207,21 @@ body {
   margin: 8px 0;
 }
 
-.doc-link {
-  text-align: center;
-  font-size: 16px;
-  color: #6b7280;
-  margin: 32px 0;
-  padding: 16px;
-  background: #fef3c7;
+.btn-back {
+  padding: 12px 24px;
+  background: #059669;
+  color: white;
+  border: none;
   border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.auth-status {
-  text-align: center;
-  padding: 16px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  margin-top: 24px;
+.btn-back:hover {
+  background: #047857;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
@@ -243,7 +233,7 @@ body {
     font-size: 28px;
   }
 
-  .main-container {
+  .construction-container {
     padding: 24px 16px;
   }
 }
