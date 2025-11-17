@@ -16,6 +16,7 @@ import ProfilePage from './components/pages/ProfilePage.vue'
 import ProductsPage from './components/pages/ProductsPage.vue'
 import QuotesPage from './components/pages/QuotesPage.vue'
 import VisibilityPage from './components/pages/VisibilityPage.vue'
+import AdminPage from './components/pages/AdminPage.vue'
 import LoginForm from './components/auth/LoginForm.vue'
 
 const showLoginModal = ref(false)
@@ -46,7 +47,7 @@ function closeLoginModal() {
     </div>
 
     <template v-else>
-      <NavigationBar v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility'].includes(currentRoute.name)" />
+      <NavigationBar v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility', 'admin'].includes(currentRoute.name)" />
 
       <main>
         <HomePage v-if="currentRoute.name === 'home'" />
@@ -61,6 +62,7 @@ function closeLoginModal() {
         <ProductsPage v-else-if="currentRoute.name === 'dashboard-products'" />
         <QuotesPage v-else-if="currentRoute.name === 'dashboard-quotes'" />
         <VisibilityPage v-else-if="currentRoute.name === 'dashboard-visibility'" />
+        <AdminPage v-else-if="currentRoute.name === 'admin'" />
 
         <div v-else class="construction-container">
           <div class="construction-notice">
@@ -107,7 +109,7 @@ function closeLoginModal() {
         </div>
       </main>
 
-      <Footer v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility'].includes(currentRoute.name)" />
+      <Footer v-if="!['dashboard', 'dashboard-profile', 'dashboard-products', 'dashboard-quotes', 'dashboard-visibility', 'admin'].includes(currentRoute.name)" />
 
       <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
     </template>
