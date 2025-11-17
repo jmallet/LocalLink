@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { supabase } from '../../lib/supabase'
-import { isAuthenticated } from '../../stores/auth'
+import { isAuthenticated, user } from '../../stores/auth'
 import { currentRoute, navigateTo } from '../../router'
 import type { Company, ProductService } from '../../types/database'
 
 const company = ref<Company | null>(null)
+const userCompany = ref<Company | null>(null)
 const products = ref<ProductService[]>([])
 const loading = ref(true)
 const showContactModal = ref(false)
+const sending = ref(false)
+const message = ref({ type: '', text: '' })
+
+const quoteFormData = ref({
+  title: '',
+  description: '',
+  budget: null as number | null,
+  delivery_date: ''
+})
 
 const companyId = computed(() => currentRoute.value.params?.id || '')
 
@@ -38,6 +48,16 @@ async function loadCompanyData() {
       if (productsError) throw productsError
       products.value = productsData || []
     }
+
+    if (isAuthenticated.value && user.value) {
+      const { data: userData } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('user_id', user.value.id)
+        .maybeSingle()
+
+      userCompany.value = userData
+    }
   } catch (error) {
     console.error('Error loading company:', error)
   } finally {
@@ -49,7 +69,70 @@ function handleContact() {
   if (!isAuthenticated.value) {
     navigateTo({ name: 'login' })
   } else {
+    message.value = { type: '', text: '' }
+    quoteFormData.value = {
+      title: '',
+      description: '',
+      budget: null,
+      delivery_date: ''
+    }
     showContactModal.value = true
+  }
+}
+
+async function sendQuoteRequest() {
+  if (!userCompany.value || !company.value) {
+    message.value = {
+      type: 'error',
+      text: 'Vous devez avoir un profil entreprise pour envoyer une demande de devis.'
+    }
+    return
+  }
+
+  sending.value = true
+  message.value = { type: '', text: '' }
+
+  try {
+    const { data: quoteData, error: quoteError } = await supabase
+      .from('quote_requests')
+      .insert({
+        company_id: userCompany.value.id,
+        title: quoteFormData.value.title,
+        description: quoteFormData.value.description,
+        budget: quoteFormData.value.budget,
+        delivery_date: quoteFormData.value.delivery_date || null,
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (quoteError) throw quoteError
+
+    const { error: recipientError } = await supabase
+      .from('quote_recipients')
+      .insert({
+        quote_id: quoteData.id,
+        company_id: company.value.id,
+        status: 'pending'
+      })
+
+    if (recipientError) throw recipientError
+
+    message.value = {
+      type: 'success',
+      text: 'Votre demande de devis a été envoyée avec succès !'
+    }
+
+    setTimeout(() => {
+      showContactModal.value = false
+    }, 2000)
+  } catch (error: any) {
+    message.value = {
+      type: 'error',
+      text: error.message || 'Une erreur est survenue lors de l\'envoi'
+    }
+  } finally {
+    sending.value = false
   }
 }
 </script>
@@ -171,14 +254,77 @@ function handleContact() {
     </div>
 
     <div v-if="showContactModal" class="modal-overlay" @click="showContactModal = false">
-      <div class="modal-content" @click.stop>
+      <div class="modal-content quote-modal" @click.stop>
         <button class="close-btn" @click="showContactModal = false">✕</button>
-        <h2>Demande de devis</h2>
-        <p>Cette fonctionnalité sera bientôt disponible.</p>
-        <p>Vous pourrez envoyer une demande de devis personnalisée à <strong>{{ company?.company_name }}</strong>.</p>
-        <button class="btn-primary" @click="showContactModal = false">
-          Fermer
-        </button>
+
+        <div class="modal-header-content">
+          <h2>Demander un devis</h2>
+          <p>Envoyez une demande à <strong>{{ company?.company_name }}</strong></p>
+        </div>
+
+        <div v-if="message.text" class="message-banner" :class="message.type">
+          {{ message.text }}
+        </div>
+
+        <form @submit.prevent="sendQuoteRequest" class="quote-form">
+          <div class="form-field">
+            <label for="title" class="form-label">Objet de la demande *</label>
+            <input
+              id="title"
+              v-model="quoteFormData.title"
+              type="text"
+              class="form-input"
+              placeholder="Ex: Devis pour fourniture de matériaux"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="description" class="form-label">Description détaillée *</label>
+            <textarea
+              id="description"
+              v-model="quoteFormData.description"
+              class="form-textarea"
+              rows="5"
+              placeholder="Décrivez précisément vos besoins, quantités, délais souhaités..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="budget" class="form-label">Budget indicatif (€)</label>
+              <input
+                id="budget"
+                v-model.number="quoteFormData.budget"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-input"
+                placeholder="Optionnel"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="delivery_date" class="form-label">Date de livraison souhaitée</label>
+              <input
+                id="delivery_date"
+                v-model="quoteFormData.delivery_date"
+                type="date"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" @click="showContactModal = false">
+              Annuler
+            </button>
+            <button type="submit" class="btn-submit" :disabled="sending">
+              {{ sending ? 'Envoi...' : 'Envoyer la demande' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -545,25 +691,131 @@ function handleContact() {
   color: #111827;
 }
 
-.modal-content h2 {
+.modal-header-content {
+  margin-bottom: 24px;
+}
+
+.modal-header-content h2 {
   font-size: 24px;
-  margin-bottom: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
 }
 
-.modal-content p {
+.modal-header-content p {
+  font-size: 14px;
   color: #6b7280;
-  margin-bottom: 16px;
+  margin: 0;
 }
 
-.btn-primary {
+.message-banner {
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.message-banner.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.message-banner.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.quote-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-input,
+.form-textarea {
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #f3f4f6;
+}
+
+.btn-submit {
+  flex: 2;
   padding: 12px 24px;
   background: #059669;
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
-  width: 100%;
+  transition: all 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #047857;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -592,6 +844,14 @@ function handleContact() {
 
   .contact-card {
     padding: 32px 24px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    flex-direction: column;
   }
 }
 </style>
