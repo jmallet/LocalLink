@@ -4,6 +4,10 @@ import { initAuth, loading } from './stores/auth'
 import { currentRoute, navigateTo } from './router'
 import NavigationBar from './components/common/NavigationBar.vue'
 import HomePage from './components/pages/HomePage.vue'
+import ProsLocauxPage from './components/pages/ProsLocauxPage.vue'
+import CompanyDetailPage from './components/pages/CompanyDetailPage.vue'
+import BlogPage from './components/pages/BlogPage.vue'
+import BlogPostPage from './components/pages/BlogPostPage.vue'
 import LoginForm from './components/auth/LoginForm.vue'
 
 const showLoginModal = ref(false)
@@ -38,6 +42,10 @@ function closeLoginModal() {
 
       <main>
         <HomePage v-if="currentRoute.name === 'home'" />
+        <ProsLocauxPage v-else-if="currentRoute.name === 'pros-locaux'" />
+        <CompanyDetailPage v-else-if="currentRoute.name === 'company-detail'" />
+        <BlogPage v-else-if="currentRoute.name === 'blog'" />
+        <BlogPostPage v-else-if="currentRoute.name === 'blog-post'" />
 
         <div v-else class="construction-container">
           <div class="construction-notice">
@@ -45,26 +53,33 @@ function closeLoginModal() {
             <p>Cette page est en cours de développement.</p>
 
             <div class="status-card">
-              <h2>✅ Fonctionnalités actuelles :</h2>
+              <h2>✅ Pages disponibles :</h2>
               <ul>
-                <li>Page d'accueil avec entreprises mises en avant</li>
-                <li>8 entreprises de test avec produits/services</li>
-                <li>3 articles de blog</li>
-                <li>3 entreprises mises en avant (boost visibilité)</li>
-                <li>Système d'authentification fonctionnel</li>
-                <li>Base de données complète avec RLS</li>
+                <li>Accueil - Page d'accueil avec entreprises mises en avant</li>
+                <li>Pros locaux - Liste complète avec filtres et recherche</li>
+                <li>Détail entreprise - Fiche complète avec produits/services</li>
+                <li>Blog - Liste des articles</li>
+                <li>Article de blog - Lecture complète d'un article</li>
               </ul>
             </div>
 
             <div class="info-card">
-              <h3>🎯 Pages disponibles :</h3>
+              <h3>📊 Données de test :</h3>
               <ul>
-                <li>✅ Accueil (page d'accueil avec entreprises)</li>
-                <li>⏳ Pros locaux (en développement)</li>
-                <li>⏳ À propos (en développement)</li>
-                <li>⏳ Blog (en développement)</li>
-                <li>⏳ Contact (en développement)</li>
-                <li>⏳ Dashboard (en développement)</li>
+                <li>8 entreprises avec profils complets</li>
+                <li>14 produits et services</li>
+                <li>3 articles de blog publiés</li>
+                <li>3 entreprises avec boost de visibilité</li>
+              </ul>
+            </div>
+
+            <div class="info-card">
+              <h3>🚀 Prochaines pages :</h3>
+              <ul>
+                <li>⏳ À propos</li>
+                <li>⏳ Contact</li>
+                <li>⏳ Dashboard entreprise</li>
+                <li>⏳ Interface admin</li>
               </ul>
             </div>
 
