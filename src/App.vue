@@ -3,11 +3,14 @@ import { ref, watch, onMounted } from 'vue'
 import { initAuth, loading } from './stores/auth'
 import { currentRoute, navigateTo } from './router'
 import NavigationBar from './components/common/NavigationBar.vue'
+import Footer from './components/common/Footer.vue'
 import HomePage from './components/pages/HomePage.vue'
 import ProsLocauxPage from './components/pages/ProsLocauxPage.vue'
 import CompanyDetailPage from './components/pages/CompanyDetailPage.vue'
 import BlogPage from './components/pages/BlogPage.vue'
 import BlogPostPage from './components/pages/BlogPostPage.vue'
+import AboutPage from './components/pages/AboutPage.vue'
+import ContactPage from './components/pages/ContactPage.vue'
 import LoginForm from './components/auth/LoginForm.vue'
 
 const showLoginModal = ref(false)
@@ -46,6 +49,8 @@ function closeLoginModal() {
         <CompanyDetailPage v-else-if="currentRoute.name === 'company-detail'" />
         <BlogPage v-else-if="currentRoute.name === 'blog'" />
         <BlogPostPage v-else-if="currentRoute.name === 'blog-post'" />
+        <AboutPage v-else-if="currentRoute.name === 'about'" />
+        <ContactPage v-else-if="currentRoute.name === 'contact'" />
 
         <div v-else class="construction-container">
           <div class="construction-notice">
@@ -60,6 +65,8 @@ function closeLoginModal() {
                 <li>Détail entreprise - Fiche complète avec produits/services</li>
                 <li>Blog - Liste des articles</li>
                 <li>Article de blog - Lecture complète d'un article</li>
+                <li>À propos - Présentation de LocalLink</li>
+                <li>Contact - Formulaire de contact et FAQ</li>
               </ul>
             </div>
 
@@ -74,12 +81,12 @@ function closeLoginModal() {
             </div>
 
             <div class="info-card">
-              <h3>🚀 Prochaines pages :</h3>
+              <h3>🚀 Prochaines fonctionnalités :</h3>
               <ul>
-                <li>⏳ À propos</li>
-                <li>⏳ Contact</li>
-                <li>⏳ Dashboard entreprise</li>
-                <li>⏳ Interface admin</li>
+                <li>⏳ Dashboard entreprise complet</li>
+                <li>⏳ Système de demande de devis</li>
+                <li>⏳ Interface d'administration</li>
+                <li>⏳ Paiements Stripe</li>
               </ul>
             </div>
 
@@ -89,6 +96,8 @@ function closeLoginModal() {
           </div>
         </div>
       </main>
+
+      <Footer />
 
       <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
     </template>
