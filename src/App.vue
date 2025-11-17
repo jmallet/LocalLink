@@ -1,174 +1,250 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import NavigationBar from './components/NavigationBar.vue'
-import HeroSection from './components/HeroSection.vue'
-import SearchFilters from './components/SearchFilters.vue'
-import BusinessCard from './components/BusinessCard.vue'
-import ContactModal from './components/ContactModal.vue'
-import AboutPage from './components/AboutPage.vue'
-import SignupModal from './components/SignupModal.vue'
-import ProsLocauxPage from './components/ProsLocauxPage.vue'
-import { mockBusinesses } from './data/mockBusinesses'
-import type { Business, Category } from './types'
+import { onMounted } from 'vue'
+import { initAuth, isAuthenticated, loading } from './stores/auth'
+import NavigationBar from './components/common/NavigationBar.vue'
 
-const currentPage = ref<'home' | 'about' | 'pros-locaux'>('home')
-const isSignupOpen = ref(false)
-const searchQuery = ref('')
-const selectedCategory = ref<Category>('all')
-const isModalOpen = ref(false)
-const selectedBusiness = ref<Business | null>(null)
-
-const filteredBusinesses = computed(() => {
-  let result = mockBusinesses
-
-  if (selectedCategory.value !== 'all') {
-    result = result.filter(b => b.category === selectedCategory.value)
-  }
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(b =>
-      b.name.toLowerCase().includes(query) ||
-      b.description.toLowerCase().includes(query) ||
-      b.tags.some(tag => tag.toLowerCase().includes(query))
-    )
-  }
-
-  return result
+onMounted(async () => {
+  await initAuth()
 })
-
-const handleContactBusiness = (business: Business) => {
-  selectedBusiness.value = business
-  isModalOpen.value = true
-}
-
-const closeModal = () => {
-  isModalOpen.value = false
-  selectedBusiness.value = null
-}
-
-const navigateToPage = (page: 'home' | 'about' | 'pros-locaux') => {
-  currentPage.value = page
-}
-
-const openSignup = () => {
-  isSignupOpen.value = true
-}
-
-const closeSignup = () => {
-  isSignupOpen.value = false
-}
 </script>
 
 <template>
   <div class="app">
-    <NavigationBar :current-page="currentPage" @navigate="navigateToPage" @open-signup="openSignup" />
-
-    <AboutPage v-if="currentPage === 'about'" />
-    <ProsLocauxPage v-else-if="currentPage === 'pros-locaux'" @contact="handleContactBusiness" />
+    <div v-if="loading" class="loading-screen">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
 
     <template v-else>
-      <HeroSection />
-      <SearchFilters
-        @update:search="searchQuery = $event"
-        @update:category="selectedCategory = $event"
-      />
+      <NavigationBar />
 
-      <main class="main-content">
-        <div class="results-header">
-          <h2 class="results-title">
-            {{ filteredBusinesses.length }}
-            {{ filteredBusinesses.length > 1 ? 'entreprises trouvées' : 'entreprise trouvée' }}
-          </h2>
-        </div>
+      <main class="main-container">
+        <div class="construction-notice">
+          <h1>🚧 Application en construction</h1>
+          <p>La structure complète de l'application LocalLink est en cours de développement.</p>
 
-        <div v-if="filteredBusinesses.length > 0" class="business-grid">
-          <BusinessCard
-            v-for="business in filteredBusinesses"
-            :key="business.id"
-            :business="business"
-            @contact="handleContactBusiness"
-          />
-        </div>
+          <div class="status-card">
+            <h2>✅ Éléments terminés:</h2>
+            <ul>
+              <li>Schéma de base de données PostgreSQL complet (7 tables)</li>
+              <li>Système d'authentification Supabase</li>
+              <li>Router et navigation</li>
+              <li>Types TypeScript</li>
+              <li>Store auth centralisé</li>
+            </ul>
+          </div>
 
-        <div v-else class="empty-state">
-          <span class="empty-icon">🔍</span>
-          <h3>Aucune entreprise trouvée</h3>
-          <p>Essayez de modifier vos critères de recherche</p>
+          <div class="status-card">
+            <h2>📋 Structure des fonctionnalités:</h2>
+            <ul>
+              <li><strong>Authentification:</strong> Inscription/Connexion avec validation SIRET/BCE</li>
+              <li><strong>Dashboard Entreprise:</strong> Profil, produits, devis, visibilité, paiements</li>
+              <li><strong>Pages Publiques:</strong> Accueil, Pros locaux, À propos, Blog, Contact</li>
+              <li><strong>Système de devis:</strong> Création, modération admin, paiement leads (10€)</li>
+              <li><strong>Visibilité:</strong> Mise en avant payante (zone locale/régionale/nationale)</li>
+              <li><strong>Admin:</strong> Validation entreprises, modération devis, gestion paiements</li>
+              <li><strong>API:</strong> 5 Edge Functions (vérification SIRET, Stripe, notifications)</li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h3>📊 Base de données</h3>
+            <p>7 tables créées avec RLS:</p>
+            <ul>
+              <li>companies (entreprises)</li>
+              <li>products_services (vitrine)</li>
+              <li>quote_requests (demandes de devis)</li>
+              <li>quote_recipients (destinataires)</li>
+              <li>visibility_boosts (mises en avant)</li>
+              <li>payments (historique)</li>
+              <li>blog_posts (articles)</li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h3>🎯 Workflow principal</h3>
+            <ol>
+              <li>Inscription avec vérification SIRET/BCE automatique</li>
+              <li>Activation profil producteur optionnelle</li>
+              <li>Création vitrine produits/services</li>
+              <li>Réception demandes de devis (payantes: 10€)</li>
+              <li>Option visibilité accrue (50-200€/semaine)</li>
+            </ol>
+          </div>
+
+          <p class="doc-link">
+            📖 Consultez <strong>PROJECT_STRUCTURE.md</strong> pour la structure complète
+          </p>
+
+          <div class="auth-status">
+            <p v-if="isAuthenticated">
+              ✅ Vous êtes connecté
+            </p>
+            <p v-else>
+              ℹ️ Non connecté
+            </p>
+          </div>
         </div>
       </main>
     </template>
-
-    <ContactModal
-      :business="selectedBusiness"
-      :is-open="isModalOpen"
-      @close="closeModal"
-    />
-
-    <SignupModal v-if="isSignupOpen" @close="closeSignup" />
   </div>
 </template>
 
-<style scoped>
-.app {
-  min-height: 100vh;
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.6;
+  color: #111827;
   background: #f9fafb;
 }
 
-.main-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px 80px;
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.results-header {
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.main-container {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  width: 100%;
+}
+
+.construction-notice {
+  background: white;
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.construction-notice h1 {
+  font-size: 36px;
+  margin-bottom: 16px;
+  color: #111827;
+}
+
+.construction-notice > p {
+  font-size: 18px;
+  color: #6b7280;
   margin-bottom: 32px;
 }
 
-.results-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-}
-
-.business-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 24px;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 80px 24px;
-}
-
-.empty-icon {
-  font-size: 64px;
-  display: block;
+.status-card {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 24px;
   margin-bottom: 24px;
 }
 
-.empty-state h3 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 12px 0;
+.status-card h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #059669;
 }
 
-.empty-state p {
+.status-card ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.status-card li {
+  padding: 8px 0;
+  padding-left: 28px;
+  position: relative;
+}
+
+.status-card li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #059669;
+  font-weight: bold;
+}
+
+.info-card {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.info-card h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #1e40af;
+}
+
+.info-card ul,
+.info-card ol {
+  margin-left: 24px;
+  color: #374151;
+}
+
+.info-card li {
+  margin: 8px 0;
+}
+
+.doc-link {
+  text-align: center;
   font-size: 16px;
   color: #6b7280;
-  margin: 0;
+  margin: 32px 0;
+  padding: 16px;
+  background: #fef3c7;
+  border-radius: 8px;
+}
+
+.auth-status {
+  text-align: center;
+  padding: 16px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  margin-top: 24px;
 }
 
 @media (max-width: 768px) {
-  .business-grid {
-    grid-template-columns: 1fr;
+  .construction-notice {
+    padding: 24px;
   }
 
-  .results-title {
-    font-size: 22px;
+  .construction-notice h1 {
+    font-size: 28px;
+  }
+
+  .main-container {
+    padding: 24px 16px;
   }
 }
 </style>
