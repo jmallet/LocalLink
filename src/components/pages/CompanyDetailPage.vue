@@ -94,11 +94,14 @@ async function sendQuoteRequest() {
     const { data: quoteData, error: quoteError } = await supabase
       .from('quote_requests')
       .insert({
-        company_id: userCompany.value.id,
+        buyer_company_id: userCompany.value.id,
         title: quoteFormData.value.title,
         description: quoteFormData.value.description,
-        delivery_date: quoteFormData.value.delivery_date || null,
-        status: 'pending'
+        category: company.value.category,
+        quantity: '1',
+        deadline: quoteFormData.value.delivery_date || null,
+        status: 'pending',
+        approved_by_admin: false
       })
       .select()
       .single()
@@ -108,9 +111,9 @@ async function sendQuoteRequest() {
     const { error: recipientError } = await supabase
       .from('quote_recipients')
       .insert({
-        quote_id: quoteData.id,
-        company_id: company.value.id,
-        status: 'pending'
+        quote_request_id: quoteData.id,
+        producer_company_id: company.value.id,
+        unlocked: false
       })
 
     if (recipientError) throw recipientError

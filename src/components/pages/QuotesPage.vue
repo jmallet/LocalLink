@@ -16,7 +16,7 @@ interface QuoteWithDetails {
   quote_request?: {
     title: string
     description: string
-    delivery_date: string | null
+    deadline: string | null
     created_at: string
     requester_company?: Company
   }
@@ -59,12 +59,12 @@ async function loadData() {
         .from('quote_recipients')
         .select(`
           *,
-          quote_request:quote_requests!inner (
+          quote_request:quote_requests!quote_recipients_quote_request_id_fkey (
             title,
             description,
-            delivery_date,
+            deadline,
             created_at,
-            requester_company:companies!quote_requests_company_id_fkey (
+            requester_company:companies!quote_requests_buyer_company_id_fkey (
               id,
               company_name,
               city,
@@ -74,7 +74,7 @@ async function loadData() {
             )
           )
         `)
-        .eq('company_id', companyData.id)
+        .eq('producer_company_id', companyData.id)
         .order('created_at', { ascending: false })
 
       quotes.value = quotesData || []
@@ -221,8 +221,8 @@ function getTimeAgo(dateString: string) {
 
             <div class="quote-footer">
               <div class="quote-meta">
-                <span v-if="quote.quote_request?.delivery_date" class="meta-item">
-                  📅 Livraison: {{ formatDate(quote.quote_request.delivery_date) }}
+                <span v-if="quote.quote_request?.deadline" class="meta-item">
+                  📅 Livraison: {{ formatDate(quote.quote_request.deadline) }}
                 </span>
               </div>
               <span class="quote-date">{{ getTimeAgo(quote.created_at) }}</span>
@@ -272,9 +272,9 @@ function getTimeAgo(dateString: string) {
             <div class="detail-section">
               <h3>Informations</h3>
               <div class="info-grid">
-                <div v-if="selectedQuote.quote_request?.delivery_date" class="info-item">
+                <div v-if="selectedQuote.quote_request?.deadline" class="info-item">
                   <span class="info-label">Date de livraison souhaitée</span>
-                  <span class="info-value">{{ formatDate(selectedQuote.quote_request.delivery_date) }}</span>
+                  <span class="info-value">{{ formatDate(selectedQuote.quote_request.deadline) }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">Reçue le</span>

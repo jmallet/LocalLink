@@ -46,7 +46,7 @@ async function loadDashboardData() {
       supabase.from('companies').select('*', { count: 'exact' }),
       supabase.from('quote_requests').select(`
         *,
-        company:companies!quote_requests_company_id_fkey(id, company_name, city, email, phone)
+        company:companies!quote_requests_buyer_company_id_fkey(id, company_name, city, email, phone)
       `, { count: 'exact' }),
       supabase.from('blog_posts').select('*', { count: 'exact' })
     ])
@@ -559,9 +559,9 @@ async function deleteQuote(quoteId: string) {
               </span>
             </div>
 
-            <div v-if="selectedQuote.delivery_date" class="detail-row">
+            <div v-if="selectedQuote.deadline" class="detail-row">
               <span class="detail-label">Date de livraison souhaitée</span>
-              <span class="detail-value">{{ formatDate(selectedQuote.delivery_date) }}</span>
+              <span class="detail-value">{{ formatDate(selectedQuote.deadline) }}</span>
             </div>
 
             <div class="detail-row">
