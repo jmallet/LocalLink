@@ -16,7 +16,6 @@ const message = ref({ type: '', text: '' })
 const quoteFormData = ref({
   title: '',
   description: '',
-  budget: null as number | null,
   delivery_date: ''
 })
 
@@ -73,7 +72,6 @@ function handleContact() {
     quoteFormData.value = {
       title: '',
       description: '',
-      budget: null,
       delivery_date: ''
     }
     showContactModal.value = true
@@ -99,7 +97,6 @@ async function sendQuoteRequest() {
         company_id: userCompany.value.id,
         title: quoteFormData.value.title,
         description: quoteFormData.value.description,
-        budget: quoteFormData.value.budget,
         delivery_date: quoteFormData.value.delivery_date || null,
         status: 'pending'
       })
@@ -291,29 +288,14 @@ async function sendQuoteRequest() {
             ></textarea>
           </div>
 
-          <div class="form-row">
-            <div class="form-field">
-              <label for="budget" class="form-label">Budget indicatif (€)</label>
-              <input
-                id="budget"
-                v-model.number="quoteFormData.budget"
-                type="number"
-                step="0.01"
-                min="0"
-                class="form-input"
-                placeholder="Optionnel"
-              />
-            </div>
-
-            <div class="form-field">
-              <label for="delivery_date" class="form-label">Date de livraison souhaitée</label>
-              <input
-                id="delivery_date"
-                v-model="quoteFormData.delivery_date"
-                type="date"
-                class="form-input"
-              />
-            </div>
+          <div class="form-field">
+            <label for="delivery_date" class="form-label">Date de livraison souhaitée</label>
+            <input
+              id="delivery_date"
+              v-model="quoteFormData.delivery_date"
+              type="date"
+              class="form-input"
+            />
           </div>
 
           <div class="modal-actions">

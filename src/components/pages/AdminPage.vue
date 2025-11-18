@@ -29,7 +29,9 @@ const allCompanies = ref<any[]>([])
 const allQuotes = ref<any[]>([])
 const loading = ref(true)
 const selectedCompany = ref<any>(null)
+const selectedQuote = ref<any>(null)
 const showCompanyModal = ref(false)
+const showQuoteModal = ref(false)
 const actionLoading = ref(false)
 const message = ref({ type: '', text: '' })
 
@@ -42,7 +44,10 @@ async function loadDashboardData() {
   try {
     const [companiesRes, quotesRes, postsRes] = await Promise.all([
       supabase.from('companies').select('*', { count: 'exact' }),
-      supabase.from('quote_requests').select('*', { count: 'exact' }),
+      supabase.from('quote_requests').select(`
+        *,
+        company:companies!quote_requests_company_id_fkey(id, company_name, city, email, phone)
+      `, { count: 'exact' }),
       supabase.from('blog_posts').select('*', { count: 'exact' })
     ])
 
@@ -165,6 +170,87 @@ function getStatusColor(status: string) {
     completed: '#6366f1'
   }
   return colors[status] || '#6b7280'
+}
+
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending: 'En attente',
+    approved: 'Approuvé',
+    rejected: 'Rejeté',
+    completed: 'Complété'
+  }
+  return labels[status] || status
+}
+
+function viewQuoteDetails(quote: any) {
+  selectedQuote.value = quote
+  showQuoteModal.value = true
+  message.value = { type: '', text: '' }
+}
+
+async function updateQuoteStatus(quote: any, newStatus: string) {
+  actionLoading.value = true
+  message.value = { type: '', text: '' }
+
+  try {
+    const { error } = await supabase
+      .from('quote_requests')
+      .update({ status: newStatus })
+      .eq('id', quote.id)
+
+    if (error) throw error
+
+    message.value = {
+      type: 'success',
+      text: `Demande ${getStatusLabel(newStatus).toLowerCase()} avec succès`
+    }
+
+    await loadDashboardData()
+
+    if (selectedQuote.value && selectedQuote.value.id === quote.id) {
+      selectedQuote.value.status = newStatus
+    }
+  } catch (error: any) {
+    message.value = {
+      type: 'error',
+      text: error.message || 'Une erreur est survenue'
+    }
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function deleteQuote(quoteId: string) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette demande de devis ? Cette action est irréversible.')) {
+    return
+  }
+
+  actionLoading.value = true
+  message.value = { type: '', text: '' }
+
+  try {
+    const { error } = await supabase
+      .from('quote_requests')
+      .delete()
+      .eq('id', quoteId)
+
+    if (error) throw error
+
+    message.value = {
+      type: 'success',
+      text: 'Demande de devis supprimée avec succès'
+    }
+
+    showQuoteModal.value = false
+    await loadDashboardData()
+  } catch (error: any) {
+    message.value = {
+      type: 'error',
+      text: error.message || 'Une erreur est survenue'
+    }
+  } finally {
+    actionLoading.value = false
+  }
 }
 </script>
 
@@ -393,10 +479,121 @@ function getStatusColor(status: string) {
     <div v-else-if="currentPage === 'quotes'" class="admin-page">
       <div class="page-header">
         <h1 class="page-title">Gestion des demandes de devis</h1>
+        <p class="page-subtitle">{{ allQuotes.length }} demandes au total</p>
       </div>
-      <div class="coming-soon">
-        <span class="icon">📋</span>
-        <p>Module de gestion des demandes en cours de développement</p>
+
+      <div v-if="message.text && !showQuoteModal" class="message-banner" :class="message.type">
+        {{ message.text }}
+      </div>
+
+      <div class="quotes-list">
+        <div class="data-table">
+          <div v-if="allQuotes.length === 0" class="empty-state">
+            Aucune demande de devis pour le moment
+          </div>
+          <div v-else class="table-rows">
+            <div v-for="quote in allQuotes" :key="quote.id" class="table-row clickable" @click="viewQuoteDetails(quote)">
+              <div class="row-main">
+                <div class="quote-info">
+                  <span class="quote-title">{{ quote.title }}</span>
+                  <span class="quote-description">{{ quote.description.substring(0, 80) }}...</span>
+                  <span class="quote-company">Par {{ quote.company?.company_name }} ({{ quote.company?.city }})</span>
+                </div>
+                <div class="row-meta">
+                  <span class="status-badge" :style="{ backgroundColor: getStatusColor(quote.status) }">
+                    {{ getStatusLabel(quote.status) }}
+                  </span>
+                  <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
+                  <button class="btn-action" @click.stop="updateQuoteStatus(quote, quote.status === 'pending' ? 'approved' : 'pending')" :disabled="actionLoading">
+                    {{ quote.status === 'pending' ? 'Approuver' : 'Remettre en attente' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showQuoteModal && selectedQuote" class="modal-overlay" @click="showQuoteModal = false">
+        <div class="modal-content quote-modal" @click.stop>
+          <button class="close-btn" @click="showQuoteModal = false">✕</button>
+
+          <div class="modal-header-content">
+            <h2>{{ selectedQuote.title }}</h2>
+            <span class="status-badge" :style="{ backgroundColor: getStatusColor(selectedQuote.status) }">
+              {{ getStatusLabel(selectedQuote.status) }}
+            </span>
+          </div>
+
+          <div v-if="message.text" class="message-banner" :class="message.type">
+            {{ message.text }}
+          </div>
+
+          <div class="quote-details-grid">
+            <div class="detail-row full-width">
+              <span class="detail-label">Description</span>
+              <span class="detail-value">{{ selectedQuote.description }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Entreprise demandeuse</span>
+              <span class="detail-value">{{ selectedQuote.company?.company_name }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Ville</span>
+              <span class="detail-value">{{ selectedQuote.company?.city }}</span>
+            </div>
+
+            <div v-if="selectedQuote.company?.email" class="detail-row">
+              <span class="detail-label">Email</span>
+              <span class="detail-value">
+                <a :href="`mailto:${selectedQuote.company.email}`">{{ selectedQuote.company.email }}</a>
+              </span>
+            </div>
+
+            <div v-if="selectedQuote.company?.phone" class="detail-row">
+              <span class="detail-label">Téléphone</span>
+              <span class="detail-value">
+                <a :href="`tel:${selectedQuote.company.phone}`">{{ selectedQuote.company.phone }}</a>
+              </span>
+            </div>
+
+            <div v-if="selectedQuote.delivery_date" class="detail-row">
+              <span class="detail-label">Date de livraison souhaitée</span>
+              <span class="detail-value">{{ formatDate(selectedQuote.delivery_date) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Créée le</span>
+              <span class="detail-value">{{ formatDate(selectedQuote.created_at) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Statut actuel</span>
+              <span class="detail-value">
+                <span class="status-badge" :style="{ backgroundColor: getStatusColor(selectedQuote.status) }">
+                  {{ getStatusLabel(selectedQuote.status) }}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div class="modal-actions-multi">
+            <button class="btn-approve" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'approved')">
+              Approuver
+            </button>
+            <button class="btn-reject" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'rejected')">
+              Rejeter
+            </button>
+            <button class="btn-pending" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'pending')">
+              Remettre en attente
+            </button>
+            <button class="btn-delete" :disabled="actionLoading" @click="deleteQuote(selectedQuote.id)">
+              Supprimer
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -875,6 +1072,92 @@ function getStatusColor(status: string) {
   cursor: not-allowed;
 }
 
+.quote-modal {
+  padding: 32px;
+}
+
+.quote-company {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.quote-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.modal-actions-multi {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-approve {
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background: #059669;
+}
+
+.btn-approve:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-reject {
+  padding: 12px 24px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-pending {
+  padding: 12px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pending:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.btn-pending:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .row-main {
     flex-direction: column;
@@ -891,6 +1174,14 @@ function getStatusColor(status: string) {
 
   .modal-actions {
     flex-direction: column;
+  }
+
+  .modal-actions-multi {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-details-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
