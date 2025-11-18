@@ -100,7 +100,7 @@ async function sendQuoteRequest() {
         category: company.value.category,
         quantity: '1',
         deadline: quoteFormData.value.delivery_date || null,
-        status: 'pending',
+        status: 'pending_approval',
         approved_by_admin: false
       })
       .select()

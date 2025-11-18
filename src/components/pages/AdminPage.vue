@@ -60,7 +60,7 @@ async function loadDashboardData() {
       verifiedCompanies: companies.filter(c => c.verified).length,
       pendingCompanies: companies.filter(c => !c.verified).length,
       totalQuotes: quotes.length,
-      pendingQuotes: quotes.filter(q => q.status === 'pending').length,
+      pendingQuotes: quotes.filter(q => q.status === 'pending_approval').length,
       totalPosts: posts.length,
       publishedPosts: posts.filter(p => p.published).length
     }
@@ -164,20 +164,22 @@ function formatDate(dateString: string) {
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
-    pending: '#f59e0b',
+    draft: '#9ca3af',
+    pending_approval: '#f59e0b',
     approved: '#10b981',
     rejected: '#ef4444',
-    completed: '#6366f1'
+    sent: '#6366f1'
   }
   return colors[status] || '#6b7280'
 }
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    pending: 'En attente',
+    draft: 'Brouillon',
+    pending_approval: 'En attente d\'approbation',
     approved: 'Approuvé',
     rejected: 'Rejeté',
-    completed: 'Complété'
+    sent: 'Envoyé'
   }
   return labels[status] || status
 }
@@ -504,8 +506,8 @@ async function deleteQuote(quoteId: string) {
                     {{ getStatusLabel(quote.status) }}
                   </span>
                   <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
-                  <button class="btn-action" @click.stop="updateQuoteStatus(quote, quote.status === 'pending' ? 'approved' : 'pending')" :disabled="actionLoading">
-                    {{ quote.status === 'pending' ? 'Approuver' : 'Remettre en attente' }}
+                  <button class="btn-action" @click.stop="updateQuoteStatus(quote, quote.status === 'pending_approval' ? 'approved' : 'pending_approval')" :disabled="actionLoading">
+                    {{ quote.status === 'pending_approval' ? 'Approuver' : 'Remettre en attente' }}
                   </button>
                 </div>
               </div>
@@ -586,7 +588,7 @@ async function deleteQuote(quoteId: string) {
             <button class="btn-reject" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'rejected')">
               Rejeter
             </button>
-            <button class="btn-pending" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'pending')">
+            <button class="btn-pending" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'pending_approval')">
               Remettre en attente
             </button>
             <button class="btn-delete" :disabled="actionLoading" @click="deleteQuote(selectedQuote.id)">
