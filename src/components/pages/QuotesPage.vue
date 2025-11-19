@@ -64,6 +64,8 @@ async function loadData() {
             description,
             deadline,
             created_at,
+            status,
+            approved_by_admin,
             requester_company:companies!quote_requests_buyer_company_id_fkey (
               id,
               company_name,
@@ -75,6 +77,7 @@ async function loadData() {
           )
         `)
         .eq('producer_company_id', companyData.id)
+        .eq('quote_request.approved_by_admin', true)
         .order('created_at', { ascending: false })
 
       quotes.value = quotesData || []

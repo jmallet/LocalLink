@@ -195,9 +195,19 @@ async function updateQuoteStatus(quote: any, newStatus: string) {
   message.value = { type: '', text: '' }
 
   try {
+    const updateData: any = { status: newStatus }
+
+    if (newStatus === 'approved') {
+      updateData.approved_by_admin = true
+      updateData.approved_at = new Date().toISOString()
+    } else if (newStatus === 'rejected' || newStatus === 'pending_approval') {
+      updateData.approved_by_admin = false
+      updateData.approved_at = null
+    }
+
     const { error } = await supabase
       .from('quote_requests')
-      .update({ status: newStatus })
+      .update(updateData)
       .eq('id', quote.id)
 
     if (error) throw error
@@ -211,6 +221,7 @@ async function updateQuoteStatus(quote: any, newStatus: string) {
 
     if (selectedQuote.value && selectedQuote.value.id === quote.id) {
       selectedQuote.value.status = newStatus
+      selectedQuote.value.approved_by_admin = updateData.approved_by_admin
     }
   } catch (error: any) {
     message.value = {
