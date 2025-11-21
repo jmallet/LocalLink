@@ -18,15 +18,27 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    console.log("Auth header present:", !!authHeader);
+    console.log("Auth header:", authHeader ? "present" : "missing");
 
     if (!authHeader) {
-      throw new Error("No authorization header");
+      return new Response(
+        JSON.stringify({ error: "No authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      throw new Error("Stripe secret key not configured");
+      return new Response(
+        JSON.stringify({ error: "Stripe secret key not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const stripe = new Stripe(stripeKey, {
@@ -35,7 +47,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
         global: {
           headers: { Authorization: authHeader },
@@ -45,21 +57,39 @@ Deno.serve(async (req: Request) => {
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
 
-    console.log("User fetch error:", userError);
-    console.log("User found:", !!user);
+    console.log("User error:", userError?.message);
+    console.log("User ID:", user?.id);
 
     if (userError || !user) {
-      throw new Error("Unauthorized: " + (userError?.message || "No user found"));
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: " + (userError?.message || "No user") }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const { tokenAmount, companyId } = await req.json();
 
     if (!tokenAmount || tokenAmount < 1) {
-      throw new Error("Invalid token amount");
+      return new Response(
+        JSON.stringify({ error: "Invalid token amount" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     if (!companyId) {
-      throw new Error("Company ID required");
+      return new Response(
+        JSON.stringify({ error: "Company ID required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const { data: company, error: companyError } = await supabaseClient
@@ -67,10 +97,27 @@ Deno.serve(async (req: Request) => {
       .select("id, company_name, email")
       .eq("id", companyId)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (companyError || !company) {
-      throw new Error("Company not found or unauthorized: " + (companyError?.message || ""));
+    if (companyError) {
+      console.error("Company fetch error:", companyError);
+      return new Response(
+        JSON.stringify({ error: "Error fetching company: " + companyError.message }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!company) {
+      return new Response(
+        JSON.stringify({ error: "Company not found or unauthorized" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const pricePerToken = 5;
@@ -104,6 +151,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),
       {
+        status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
@@ -113,9 +161,9 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error("Function error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Internal server error" }),
       {
-        status: 400,
+        status: 500,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
