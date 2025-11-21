@@ -177,34 +177,22 @@ async function purchaseTokens() {
   message.value = { type: '', text: '' }
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      throw new Error('Vous devez être connecté')
-    }
-
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-token-checkout`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          tokenAmount: tokenAmount.value,
-          companyId: company.value.id
-        })
+    const { data, error } = await supabase.functions.invoke('create-token-checkout', {
+      body: {
+        tokenAmount: tokenAmount.value,
+        companyId: company.value.id
       }
-    )
+    })
 
-    const data = await response.json()
-
-    if (!response.ok || data.error) {
-      throw new Error(data.error || 'Erreur lors de la création du paiement')
+    if (error) {
+      throw new Error(error.message)
     }
 
-    if (data.url) {
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+
+    if (data?.url) {
       window.location.href = data.url
     }
   } catch (error: any) {
