@@ -40,6 +40,25 @@ const message = ref({ type: '', text: '' })
 
 onMounted(async () => {
   await loadData()
+
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('success') === 'true') {
+    message.value = {
+      type: 'success',
+      text: 'Paiement réussi ! Vos jetons ont été ajoutés.'
+    }
+    window.history.replaceState({}, '', window.location.pathname)
+
+    setTimeout(async () => {
+      await loadData()
+    }, 2000)
+  } else if (urlParams.get('canceled') === 'true') {
+    message.value = {
+      type: 'error',
+      text: 'Paiement annulé'
+    }
+    window.history.replaceState({}, '', window.location.pathname)
+  }
 })
 
 async function loadData() {
