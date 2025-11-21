@@ -193,7 +193,12 @@ async function purchaseTokens() {
     }
 
     if (data?.url) {
-      window.location.href = data.url
+      window.open(data.url, '_blank')
+      closeTokenModal()
+      message.value = {
+        type: 'success',
+        text: 'Redirection vers le paiement dans un nouvel onglet...'
+      }
     }
   } catch (error: any) {
     message.value = {
