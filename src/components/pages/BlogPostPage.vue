@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { currentRoute, navigateTo } from '../../router'
 import type { BlogPost } from '../../types/database'
+
+const route = useRoute()
+const router = useRouter()
 
 const post = ref<BlogPost | null>(null)
 const loading = ref(true)
 
-const postSlug = computed(() => currentRoute.value.params?.slug || '')
+const postSlug = computed(() => route.params?.slug as string || '')
 
 onMounted(async () => {
   await loadPost()
@@ -52,7 +55,7 @@ function formatDate(dateString: string) {
     <article v-else-if="post" class="blog-post">
       <div class="post-header">
         <div class="container">
-          <button class="btn-back" @click="navigateTo({ name: 'blog' })">
+          <button class="btn-back" @click="router.push({ name: 'blog' })">
             ← Retour au blog
           </button>
 
@@ -77,7 +80,7 @@ function formatDate(dateString: string) {
 
       <div class="post-footer">
         <div class="container">
-          <button class="btn-back-footer" @click="navigateTo({ name: 'blog' })">
+          <button class="btn-back-footer" @click="router.push({ name: 'blog' })">
             ← Retour au blog
           </button>
         </div>
@@ -86,7 +89,7 @@ function formatDate(dateString: string) {
 
     <div v-else class="error-container">
       <h2>Article non trouvé</h2>
-      <button class="btn-back" @click="navigateTo({ name: 'blog' })">
+      <button class="btn-back" @click="router.push({ name: 'blog' })">
         ← Retour au blog
       </button>
     </div>

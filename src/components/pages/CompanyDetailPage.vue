@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { isAuthenticated, user } from '../../stores/auth'
-import { currentRoute, navigateTo } from '../../router'
 import type { Company, ProductService } from '../../types/database'
+
+const route = useRoute()
+const router = useRouter()
 
 const company = ref<Company | null>(null)
 const userCompany = ref<Company | null>(null)
@@ -19,7 +22,7 @@ const quoteFormData = ref({
   delivery_date: ''
 })
 
-const companyId = computed(() => currentRoute.value.params?.id || '')
+const companyId = computed(() => route.params?.id as string || '')
 
 onMounted(async () => {
   await loadCompanyData()
@@ -66,7 +69,7 @@ async function loadCompanyData() {
 
 function handleContact() {
   if (!isAuthenticated.value) {
-    navigateTo({ name: 'login' })
+    router.push({ name: 'login' })
   } else {
     message.value = { type: '', text: '' }
     quoteFormData.value = {
@@ -147,7 +150,7 @@ async function sendQuoteRequest() {
     <div v-else-if="company" class="company-detail">
       <div class="company-header">
         <div class="header-content">
-          <button class="btn-back" @click="navigateTo({ name: 'pros-locaux' })">
+          <button class="btn-back" @click="router.push({ name: 'pros-locaux' })">
             ← Retour aux pros locaux
           </button>
 
@@ -248,7 +251,7 @@ async function sendQuoteRequest() {
 
     <div v-else class="error-container">
       <h2>Entreprise non trouvée</h2>
-      <button class="btn-back" @click="navigateTo({ name: 'pros-locaux' })">
+      <button class="btn-back" @click="router.push({ name: 'pros-locaux' })">
         ← Retour aux pros locaux
       </button>
     </div>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { navigateTo } from '../../router'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 </script>
 
 <template>
@@ -163,7 +165,7 @@ import { navigateTo } from '../../router'
             Inscrivez votre entreprise gratuitement et commencez à développer
             votre réseau local dès aujourd'hui.
           </p>
-          <button class="btn-cta" @click="navigateTo({ name: 'login' })">
+          <button class="btn-cta" @click="router.push({ name: 'login' })">
             Créer mon compte gratuitement
           </button>
         </div>

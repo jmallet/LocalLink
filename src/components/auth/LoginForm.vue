@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { signIn, signUp } from '../../stores/auth'
-import { navigateTo } from '../../router'
+
+const router = useRouter()
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -31,13 +33,13 @@ const handleSubmit = async () => {
       const { error: signUpError } = await signUp(formData.value.email, formData.value.password)
       if (signUpError) throw signUpError
 
-      navigateTo({ name: 'dashboard' })
+      router.push({ name: 'dashboard' })
       emit('close')
     } else {
       const { error: signInError } = await signIn(formData.value.email, formData.value.password)
       if (signInError) throw signInError
 
-      navigateTo({ name: 'dashboard' })
+      router.push({ name: 'dashboard' })
       emit('close')
     }
   } catch (err: any) {

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { isAuthenticated } from '../../stores/auth'
-import { navigateTo } from '../../router'
 import type { Company } from '../../types/database'
 import CompanyCard from '../common/CompanyCard.vue'
 import SearchFilters from '../common/SearchFilters.vue'
+
+const router = useRouter()
 
 const companies = ref<Company[]>([])
 const loading = ref(true)
@@ -72,14 +74,14 @@ async function loadCompanies() {
 }
 
 function handleCompanyClick(company: Company) {
-  navigateTo({ name: 'company-detail', params: { id: company.id } })
+  router.push({ name: 'company-detail', params: { id: company.id } })
 }
 
 function handleContact(company: Company) {
   if (!isAuthenticated.value) {
     showLoginModal.value = true
   } else {
-    navigateTo({ name: 'company-detail', params: { id: company.id } })
+    router.push({ name: 'company-detail', params: { id: company.id } })
   }
 }
 

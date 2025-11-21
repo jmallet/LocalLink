@@ -11,6 +11,7 @@ export const loading = ref(true)
 export const isAuthenticated = computed(() => !!user.value)
 export const isProducer = computed(() => company.value?.is_producer && company.value?.producer_active)
 export const isVerified = computed(() => company.value?.verified)
+export const isAdmin = computed(() => company.value?.role === 'admin')
 
 export async function initAuth() {
   loading.value = true

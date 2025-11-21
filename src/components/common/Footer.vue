@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { navigateTo } from '../../router'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const currentYear = new Date().getFullYear()
 </script>
 
@@ -22,20 +23,20 @@ const currentYear = new Date().getFullYear()
         <div class="footer-section">
           <h3 class="footer-title">Navigation</h3>
           <ul class="footer-links">
-            <li><a @click.prevent="navigateTo({ name: 'home' })" href="#">Accueil</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'pros-locaux' })" href="#">Pros locaux</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'about' })" href="#">À propos</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'blog' })" href="#">Blog</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'contact' })" href="#">Contact</a></li>
+            <li><a @click.prevent="router.push({ name: 'home' })" href="#">Accueil</a></li>
+            <li><a @click.prevent="router.push({ name: 'pros-locaux' })" href="#">Pros locaux</a></li>
+            <li><a @click.prevent="router.push({ name: 'about' })" href="#">À propos</a></li>
+            <li><a @click.prevent="router.push({ name: 'blog' })" href="#">Blog</a></li>
+            <li><a @click.prevent="router.push({ name: 'contact' })" href="#">Contact</a></li>
           </ul>
         </div>
 
         <div class="footer-section">
           <h3 class="footer-title">Entreprises</h3>
           <ul class="footer-links">
-            <li><a @click.prevent="navigateTo({ name: 'login' })" href="#">Créer un compte</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'login' })" href="#">Se connecter</a></li>
-            <li><a @click.prevent="navigateTo({ name: 'dashboard' })" href="#">Dashboard</a></li>
+            <li><a @click.prevent="router.push({ name: 'login' })" href="#">Créer un compte</a></li>
+            <li><a @click.prevent="router.push({ name: 'login' })" href="#">Se connecter</a></li>
+            <li><a @click.prevent="router.push({ name: 'dashboard' })" href="#">Dashboard</a></li>
             <li><a href="#">Tarifs</a></li>
           </ul>
         </div>

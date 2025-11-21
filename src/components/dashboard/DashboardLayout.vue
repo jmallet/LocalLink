@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { currentRoute, navigateTo } from '../../router'
+import { useRoute, useRouter } from 'vue-router'
 import { signOut, user } from '../../stores/auth'
+
+const route = useRoute()
+const router = useRouter()
 
 const mobileMenuOpen = ref(false)
 
@@ -15,7 +18,7 @@ const menuItems = [
 
 async function handleSignOut() {
   await signOut()
-  navigateTo({ name: 'home' })
+  router.push({ name: 'home' })
 }
 </script>
 
@@ -23,24 +26,25 @@ async function handleSignOut() {
   <div class="dashboard-layout">
     <aside class="sidebar" :class="{ 'mobile-open': mobileMenuOpen }">
       <div class="sidebar-header">
-        <div class="sidebar-brand" @click="navigateTo({ name: 'home' })">
+        <router-link to="/" class="sidebar-brand">
           <span class="logo-icon">🏪</span>
           <span class="logo-text">LocalLink</span>
-        </div>
+        </router-link>
         <button class="close-mobile-menu" @click="mobileMenuOpen = false">✕</button>
       </div>
 
       <nav class="sidebar-nav">
-        <button
+        <router-link
           v-for="item in menuItems"
           :key="item.name"
+          :to="{ name: item.name }"
           class="nav-item"
-          :class="{ active: currentRoute.name === item.name }"
-          @click="navigateTo({ name: item.name }); mobileMenuOpen = false"
+          :class="{ active: route.name === item.name }"
+          @click="mobileMenuOpen = false"
         >
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
-        </button>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
@@ -62,7 +66,7 @@ async function handleSignOut() {
           ☰
         </button>
         <h1 class="page-title">
-          {{ menuItems.find(item => item.name === currentRoute.name)?.label || 'Dashboard' }}
+          {{ menuItems.find(item => item.name === route.name)?.label || 'Dashboard' }}
         </h1>
       </header>
 

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { isAuthenticated } from '../../stores/auth'
-import { navigateTo } from '../../router'
 import type { Company } from '../../types/database'
 import CompanyCard from '../common/CompanyCard.vue'
+
+const router = useRouter()
 
 const featuredCompanies = ref<Company[]>([])
 const otherCompanies = ref<Company[]>([])
@@ -59,7 +61,7 @@ async function loadCompanies() {
 }
 
 function handleCompanyClick(company: Company) {
-  navigateTo({ name: 'company-detail', params: { id: company.id } })
+  router.push({ name: 'company-detail', params: { id: company.id } })
 }
 
 function handleContact(company: Company) {
@@ -67,7 +69,7 @@ function handleContact(company: Company) {
     selectedCompany.value = company
     showLoginModal.value = true
   } else {
-    navigateTo({ name: 'company-detail', params: { id: company.id } })
+    router.push({ name: 'company-detail', params: { id: company.id } })
   }
 }
 
@@ -75,7 +77,7 @@ function handleViewMore() {
   if (!isAuthenticated.value) {
     showLoginModal.value = true
   } else {
-    navigateTo({ name: 'pros-locaux' })
+    router.push({ name: 'pros-locaux' })
   }
 }
 </script>
@@ -93,10 +95,10 @@ function handleViewMore() {
           le circuit court et l'économie locale.
         </p>
         <div class="hero-actions">
-          <button class="btn-primary-large" @click="navigateTo({ name: 'pros-locaux' })">
+          <button class="btn-primary-large" @click="router.push({ name: 'pros-locaux' })">
             Découvrir les pros locaux
           </button>
-          <button v-if="!isAuthenticated" class="btn-secondary-large" @click="navigateTo({ name: 'login' })">
+          <button v-if="!isAuthenticated" class="btn-secondary-large" @click="router.push({ name: 'login' })">
             Créer mon compte
           </button>
         </div>
@@ -173,7 +175,7 @@ function handleViewMore() {
         </div>
 
         <div v-else-if="isAuthenticated" class="view-more-container">
-          <button class="btn-view-more" @click="navigateTo({ name: 'pros-locaux' })">
+          <button class="btn-view-more" @click="router.push({ name: 'pros-locaux' })">
             Voir tous les professionnels
           </button>
         </div>

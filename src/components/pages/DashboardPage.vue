@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { user } from '../../stores/auth'
-import { navigateTo } from '../../router'
 import DashboardLayout from '../dashboard/DashboardLayout.vue'
 import type { Company } from '../../types/database'
+
+const router = useRouter()
 
 const company = ref<Company | null>(null)
 const stats = ref({
@@ -77,7 +79,7 @@ async function loadDashboardData() {
         <span class="empty-icon">🏢</span>
         <h2>Bienvenue sur LocalLink !</h2>
         <p>Vous n'avez pas encore de profil entreprise.</p>
-        <button class="btn-primary" @click="navigateTo({ name: 'dashboard-profile' })">
+        <button class="btn-primary" @click="router.push({ name: 'dashboard-profile' })">
           Créer mon profil
         </button>
       </div>
@@ -135,7 +137,7 @@ async function loadDashboardData() {
             <span class="action-icon">🏢</span>
             <h3>Gérer mon profil</h3>
             <p>Modifiez vos informations, logo, description et coordonnées</p>
-            <button class="btn-action" @click="navigateTo({ name: 'dashboard-profile' })">
+            <button class="btn-action" @click="router.push({ name: 'dashboard-profile' })">
               Accéder →
             </button>
           </div>
@@ -144,7 +146,7 @@ async function loadDashboardData() {
             <span class="action-icon">📦</span>
             <h3>Mes produits & services</h3>
             <p>Ajoutez ou modifiez votre catalogue de produits et services</p>
-            <button class="btn-action" @click="navigateTo({ name: 'dashboard-products' })">
+            <button class="btn-action" @click="router.push({ name: 'dashboard-products' })">
               Gérer →
             </button>
           </div>
@@ -153,7 +155,7 @@ async function loadDashboardData() {
             <span class="action-icon">📋</span>
             <h3>Demandes de devis</h3>
             <p>Consultez les demandes de devis que vous avez reçues</p>
-            <button class="btn-action" @click="navigateTo({ name: 'dashboard-quotes' })">
+            <button class="btn-action" @click="router.push({ name: 'dashboard-quotes' })">
               Voir →
             </button>
           </div>
@@ -162,7 +164,7 @@ async function loadDashboardData() {
             <span class="action-icon">⭐</span>
             <h3>Augmenter ma visibilité</h3>
             <p>Apparaissez en haut des résultats de recherche</p>
-            <button class="btn-action" @click="navigateTo({ name: 'dashboard-visibility' })">
+            <button class="btn-action" @click="router.push({ name: 'dashboard-visibility' })">
               Découvrir →
             </button>
           </div>

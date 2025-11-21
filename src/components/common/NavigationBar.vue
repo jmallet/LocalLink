@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { isAuthenticated, signOut, user } from '../../stores/auth'
-import { navigateTo } from '../../router'
 import { supabase } from '../../lib/supabase'
+
+const router = useRouter()
 
 const mobileMenuOpen = ref(false)
 const isAdmin = ref(false)
@@ -13,7 +15,7 @@ const toggleMobileMenu = () => {
 
 const handleSignOut = async () => {
   await signOut()
-  navigateTo({ name: 'home' })
+  router.push({ name: 'home' })
 }
 
 async function checkAdminStatus() {
@@ -39,25 +41,25 @@ onMounted(() => {
 <template>
   <nav class="navbar">
     <div class="nav-container">
-      <div class="nav-brand" @click="navigateTo({ name: 'home' })">
+      <router-link to="/" class="nav-brand">
         <span class="logo-icon">🏪</span>
         <span class="logo-text">LocalLink</span>
-      </div>
+      </router-link>
 
       <div class="nav-links" :class="{ 'mobile-open': mobileMenuOpen }">
-        <a @click.prevent="navigateTo({ name: 'home' })" href="#" class="nav-link">Accueil</a>
-        <a @click.prevent="navigateTo({ name: 'pros-locaux' })" href="#" class="nav-link">Pros locaux</a>
-        <a @click.prevent="navigateTo({ name: 'about' })" href="#" class="nav-link">À propos</a>
-        <a @click.prevent="navigateTo({ name: 'blog' })" href="#" class="nav-link">Blog</a>
-        <a @click.prevent="navigateTo({ name: 'contact' })" href="#" class="nav-link">Contact</a>
+        <router-link to="/" class="nav-link">Accueil</router-link>
+        <router-link to="/pros-locaux" class="nav-link">Pros locaux</router-link>
+        <router-link to="/a-propos" class="nav-link">À propos</router-link>
+        <router-link to="/blog" class="nav-link">Blog</router-link>
+        <router-link to="/contact" class="nav-link">Contact</router-link>
       </div>
 
       <div class="nav-actions">
         <template v-if="isAuthenticated">
-          <button v-if="isAdmin" class="btn-admin" @click="navigateTo({ name: 'admin' })">
+          <button v-if="isAdmin" class="btn-admin" @click="router.push({ name: 'admin' })">
             Admin
           </button>
-          <button class="btn-secondary" @click="navigateTo({ name: 'dashboard' })">
+          <button class="btn-secondary" @click="router.push({ name: 'dashboard' })">
             Dashboard
           </button>
           <button class="btn-secondary" @click="handleSignOut">
@@ -65,10 +67,10 @@ onMounted(() => {
           </button>
         </template>
         <template v-else>
-          <button class="btn-secondary" @click="navigateTo({ name: 'login' })">
+          <button class="btn-secondary" @click="$emit('show-login')">
             Connexion
           </button>
-          <button class="btn-primary" @click="navigateTo({ name: 'login' })">
+          <button class="btn-primary" @click="$emit('show-login')">
             Créer un compte
           </button>
         </template>

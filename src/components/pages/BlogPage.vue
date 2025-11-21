@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { navigateTo } from '../../router'
 import type { BlogPost } from '../../types/database'
+
+const router = useRouter()
 
 const posts = ref<BlogPost[]>([])
 const loading = ref(true)
@@ -30,7 +32,7 @@ async function loadPosts() {
 }
 
 function handlePostClick(post: BlogPost) {
-  navigateTo({ name: 'blog-post', params: { slug: post.slug } })
+  router.push({ name: 'blog-post', params: { slug: post.slug } })
 }
 
 function formatDate(dateString: string) {

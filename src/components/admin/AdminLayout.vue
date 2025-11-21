@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { isAuthenticated, user, signOut } from '../../stores/auth'
-import { navigateTo } from '../../router'
 import { supabase } from '../../lib/supabase'
+
+const router = useRouter()
 
 const currentPage = ref('dashboard')
 const isAdmin = ref(false)
@@ -18,7 +20,7 @@ const menuItems = [
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
-    navigateTo({ name: 'home' })
+    router.push({ name: 'home' })
     return
   }
 
@@ -37,11 +39,11 @@ async function checkAdminStatus() {
     isAdmin.value = data?.role === 'admin'
 
     if (!isAdmin.value) {
-      navigateTo({ name: 'home' })
+      router.push({ name: 'home' })
     }
   } catch (error) {
     console.error('Error checking admin status:', error)
-    navigateTo({ name: 'home' })
+    router.push({ name: 'home' })
   } finally {
     loading.value = false
   }
@@ -53,7 +55,7 @@ function selectPage(pageId: string) {
 
 async function handleSignOut() {
   await signOut()
-  navigateTo({ name: 'home' })
+  router.push({ name: 'home' })
 }
 </script>
 
@@ -66,13 +68,13 @@ async function handleSignOut() {
   <div v-else-if="isAdmin" class="admin-layout">
     <aside class="admin-sidebar">
       <div class="sidebar-header">
-        <div class="brand" @click="navigateTo({ name: 'home' })">
+        <router-link to="/" class="brand">
           <span class="brand-icon">🏪</span>
           <div class="brand-text">
             <h1>LocalLink</h1>
             <span class="badge-admin">Admin</span>
           </div>
-        </div>
+        </router-link>
       </div>
 
       <nav class="sidebar-nav">
