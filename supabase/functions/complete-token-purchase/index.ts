@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: " + (userError?.message || "Invalid token") }),
+        JSON.stringify({ error: "Unauthorized" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -48,11 +48,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { tokenAmount, companyId } = await req.json();
+    const { sessionId } = await req.json();
 
-    if (!tokenAmount || tokenAmount < 1) {
+    if (!sessionId) {
       return new Response(
-        JSON.stringify({ error: "Invalid token amount" }),
+        JSON.stringify({ error: "Session ID required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,9 +60,39 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!companyId) {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
       return new Response(
-        JSON.stringify({ error: "Company ID required" }),
+        JSON.stringify({ error: "Stripe not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2023-10-16",
+    });
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
+      return new Response(
+        JSON.stringify({ error: "Payment not completed", status: session.payment_status }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const companyId = session.metadata?.company_id;
+    const tokenAmount = parseInt(session.metadata?.token_amount || "0");
+
+    if (!companyId || !tokenAmount) {
+      return new Response(
+        JSON.stringify({ error: "Invalid session metadata" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -75,78 +105,65 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { data: company, error: companyError } = await adminClient
-      .from("companies")
-      .select("id, company_name, email")
-      .eq("id", companyId)
-      .eq("user_id", user.id)
+    const { data: existingPayment } = await adminClient
+      .from("payments")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
       .maybeSingle();
 
-    if (companyError) {
+    if (existingPayment) {
       return new Response(
-        JSON.stringify({ error: "Error fetching company: " + companyError.message }),
+        JSON.stringify({
+          success: true,
+          message: "Payment already processed",
+          alreadyProcessed: true
+        }),
         {
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    if (!company) {
-      return new Response(
-        JSON.stringify({ error: "Company not found or unauthorized" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      return new Response(
-        JSON.stringify({ error: "Stripe secret key not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2023-10-16",
-    });
-
-    const pricePerToken = 5;
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: `${tokenAmount} Jeton${tokenAmount > 1 ? "s" : ""} de déverrouillage`,
-              description: "Jetons pour déverrouiller les demandes de devis",
-            },
-            unit_amount: pricePerToken * 100,
-          },
-          quantity: tokenAmount,
-        },
-      ],
-      mode: "payment",
-      success_url: `${req.headers.get("origin")}/dashboard/devis?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/dashboard/devis?canceled=true`,
-      metadata: {
+    const { data: payment, error: paymentError } = await adminClient
+      .from("payments")
+      .insert({
         company_id: companyId,
-        token_amount: tokenAmount.toString(),
-        user_id: user.id,
         type: "token_purchase",
-      },
-    });
+        amount: session.amount_total ? session.amount_total / 100 : 0,
+        stripe_payment_id: session.payment_intent as string,
+        stripe_session_id: sessionId,
+        status: "succeeded",
+        metadata: {
+          token_amount: tokenAmount,
+        },
+      })
+      .select()
+      .single();
+
+    if (paymentError) {
+      console.error("Payment insert error:", paymentError);
+      throw paymentError;
+    }
+
+    const { data: result, error: tokenError } = await adminClient
+      .rpc("add_tokens_after_purchase", {
+        p_company_id: companyId,
+        p_token_amount: tokenAmount,
+        p_payment_id: payment.id,
+      });
+
+    if (tokenError) {
+      console.error("Token add error:", tokenError);
+      throw tokenError;
+    }
 
     return new Response(
-      JSON.stringify({ sessionId: session.id, url: session.url }),
+      JSON.stringify({
+        success: true,
+        balance: result?.balance,
+        tokensAdded: tokenAmount
+      }),
       {
         status: 200,
         headers: {

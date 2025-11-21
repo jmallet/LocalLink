@@ -42,16 +42,40 @@ onMounted(async () => {
   await loadData()
 
   const urlParams = new URLSearchParams(window.location.search)
-  if (urlParams.get('success') === 'true') {
-    message.value = {
-      type: 'success',
-      text: 'Paiement réussi ! Vos jetons ont été ajoutés.'
-    }
-    window.history.replaceState({}, '', window.location.pathname)
+  const sessionId = urlParams.get('session_id')
 
-    setTimeout(async () => {
-      await loadData()
-    }, 2000)
+  if (urlParams.get('success') === 'true' && sessionId) {
+    message.value = {
+      type: 'info',
+      text: 'Vérification du paiement en cours...'
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('complete-token-purchase', {
+        body: { sessionId }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data?.success) {
+        message.value = {
+          type: 'success',
+          text: `Paiement réussi ! ${data.tokensAdded} jeton${data.tokensAdded > 1 ? 's ont' : ' a'} été ajouté${data.tokensAdded > 1 ? 's' : ''} à votre compte.`
+        }
+        await loadData()
+      } else {
+        throw new Error(data?.error || 'Erreur lors de la vérification du paiement')
+      }
+    } catch (error: any) {
+      message.value = {
+        type: 'error',
+        text: error.message || 'Erreur lors de la vérification du paiement'
+      }
+    }
+
+    window.history.replaceState({}, '', window.location.pathname)
   } else if (urlParams.get('canceled') === 'true') {
     message.value = {
       type: 'error',
@@ -212,12 +236,7 @@ async function purchaseTokens() {
     }
 
     if (data?.url) {
-      window.open(data.url, '_blank')
-      closeTokenModal()
-      message.value = {
-        type: 'success',
-        text: 'Redirection vers le paiement dans un nouvel onglet...'
-      }
+      window.location.href = data.url
     }
   } catch (error: any) {
     message.value = {
