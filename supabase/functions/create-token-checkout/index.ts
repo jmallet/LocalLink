@@ -18,7 +18,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    console.log("Auth header:", authHeader ? "present" : "missing");
 
     if (!authHeader) {
       return new Response(
@@ -30,39 +29,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      return new Response(
-        JSON.stringify({ error: "Stripe secret key not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2023-10-16",
-    });
+    const token = authHeader.replace('Bearer ', '');
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-
-    console.log("User error:", userError?.message);
-    console.log("User ID:", user?.id);
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: " + (userError?.message || "No user") }),
+        JSON.stringify({ error: "Unauthorized: " + (userError?.message || "Invalid token") }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,7 +70,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: company, error: companyError } = await supabaseClient
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: company, error: companyError } = await adminClient
       .from("companies")
       .select("id, company_name, email")
       .eq("id", companyId)
@@ -100,7 +83,6 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (companyError) {
-      console.error("Company fetch error:", companyError);
       return new Response(
         JSON.stringify({ error: "Error fetching company: " + companyError.message }),
         {
@@ -119,6 +101,21 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      return new Response(
+        JSON.stringify({ error: "Stripe secret key not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2023-10-16",
+    });
 
     const pricePerToken = 5;
 
