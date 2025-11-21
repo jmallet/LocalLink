@@ -17,6 +17,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    console.log("Auth header present:", !!authHeader);
+
+    if (!authHeader) {
+      throw new Error("No authorization header");
+    }
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       throw new Error("Stripe secret key not configured");
@@ -31,14 +38,18 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
+          headers: { Authorization: authHeader },
         },
       }
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      throw new Error("Unauthorized");
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+    console.log("User fetch error:", userError);
+    console.log("User found:", !!user);
+
+    if (userError || !user) {
+      throw new Error("Unauthorized: " + (userError?.message || "No user found"));
     }
 
     const { tokenAmount, companyId } = await req.json();
@@ -51,19 +62,18 @@ Deno.serve(async (req: Request) => {
       throw new Error("Company ID required");
     }
 
-    const { data: company } = await supabaseClient
+    const { data: company, error: companyError } = await supabaseClient
       .from("companies")
       .select("id, company_name, email")
       .eq("id", companyId)
       .eq("user_id", user.id)
       .single();
 
-    if (!company) {
-      throw new Error("Company not found or unauthorized");
+    if (companyError || !company) {
+      throw new Error("Company not found or unauthorized: " + (companyError?.message || ""));
     }
 
     const pricePerToken = 5;
-    const totalAmount = tokenAmount * pricePerToken;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -101,6 +111,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error: any) {
+    console.error("Function error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
