@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, isAdmin } from '../stores/auth'
+import { isAuthenticated, isAdmin, loading as authLoading } from '../stores/auth'
 import HomePage from '../components/pages/HomePage.vue'
 import ProsLocauxPage from '../components/pages/ProsLocauxPage.vue'
 import CompanyDetailPage from '../components/pages/CompanyDetailPage.vue'
@@ -145,10 +145,19 @@ const router = createRouter({
   }
 })
 
-router.beforeEach((to, _from, next) => {
-  if (to.meta.requiresAuth && !isAuthenticated.value) {
-    next({ name: 'home' })
-  } else if (to.meta.requiresAdmin && !isAdmin.value) {
+router.beforeEach(async (to, _from, next) => {
+  if (to.meta.requiresAuth) {
+    while (authLoading.value) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+
+    if (!isAuthenticated.value) {
+      next({ name: 'home' })
+      return
+    }
+  }
+
+  if (to.meta.requiresAdmin && !isAdmin.value) {
     next({ name: 'dashboard' })
   } else {
     if (to.meta.title) {

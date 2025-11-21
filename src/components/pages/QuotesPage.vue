@@ -50,12 +50,17 @@ onMounted(async () => {
       text: 'Vérification du paiement en cours...'
     }
 
+    console.log('Processing payment with session ID:', sessionId)
+
     try {
       const { data, error } = await supabase.functions.invoke('complete-token-purchase', {
         body: { sessionId }
       })
 
+      console.log('Function response:', { data, error })
+
       if (error) {
+        console.error('Function error:', error)
         throw error
       }
 
@@ -66,12 +71,14 @@ onMounted(async () => {
         }
         await loadData()
       } else {
+        console.error('Payment verification failed:', data)
         throw new Error(data?.error || 'Erreur lors de la vérification du paiement')
       }
     } catch (error: any) {
+      console.error('Error processing payment:', error)
       message.value = {
         type: 'error',
-        text: error.message || 'Erreur lors de la vérification du paiement'
+        text: `Erreur: ${error.message || 'Erreur lors de la vérification du paiement'}`
       }
     }
 
