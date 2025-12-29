@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, isAdmin, loading as authLoading } from '../stores/auth'
+import { isAuthenticated, isAdmin, loading as authLoading, user } from '../stores/auth'
+import { supabase } from '../lib/supabase'
 import HomePage from '../components/pages/HomePage.vue'
 import ProsLocauxPage from '../components/pages/ProsLocauxPage.vue'
 import CompanyDetailPage from '../components/pages/CompanyDetailPage.vue'
@@ -13,6 +14,10 @@ import ProductsPage from '../components/pages/ProductsPage.vue'
 import QuotesPage from '../components/pages/QuotesPage.vue'
 import VisibilityPage from '../components/pages/VisibilityPage.vue'
 import AdminPage from '../components/pages/AdminPage.vue'
+import IndividualProfilePage from '../components/pages/IndividualProfilePage.vue'
+import IndividualQuotesListPage from '../components/pages/IndividualQuotesListPage.vue'
+import IndividualNewQuotePage from '../components/pages/IndividualNewQuotePage.vue'
+import IndividualQuoteDetailPage from '../components/pages/IndividualQuoteDetailPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -134,6 +139,46 @@ const router = createRouter({
         requiresAuth: true,
         requiresAdmin: true
       }
+    },
+    {
+      path: '/particulier/profil',
+      name: 'individual-profile',
+      component: IndividualProfilePage,
+      meta: {
+        title: 'Mon profil - LocalLink',
+        requiresAuth: true,
+        requiresIndividual: true
+      }
+    },
+    {
+      path: '/particulier/devis',
+      name: 'individual-quotes',
+      component: IndividualQuotesListPage,
+      meta: {
+        title: 'Mes demandes de devis - LocalLink',
+        requiresAuth: true,
+        requiresIndividual: true
+      }
+    },
+    {
+      path: '/particulier/nouvelle-demande',
+      name: 'individual-new-quote',
+      component: IndividualNewQuotePage,
+      meta: {
+        title: 'Nouvelle demande de devis - LocalLink',
+        requiresAuth: true,
+        requiresIndividual: true
+      }
+    },
+    {
+      path: '/particulier/devis/:id',
+      name: 'individual-quote-detail',
+      component: IndividualQuoteDetailPage,
+      meta: {
+        title: 'Détail de la demande - LocalLink',
+        requiresAuth: true,
+        requiresIndividual: true
+      }
     }
   ],
   scrollBehavior(to, from, savedPosition) {
@@ -153,6 +198,33 @@ router.beforeEach(async (to, _from, next) => {
 
     if (!isAuthenticated.value) {
       next({ name: 'home' })
+      return
+    }
+
+    const { data: individualData } = await supabase
+      .from('individuals')
+      .select('id')
+      .eq('user_id', user.value?.id)
+      .maybeSingle()
+
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('user_id', user.value?.id)
+      .maybeSingle()
+
+    const isIndividual = !!individualData
+    const isCompany = !!companyData
+
+    if (to.name === 'dashboard') {
+      if (isIndividual && !isCompany) {
+        next({ name: 'individual-profile' })
+        return
+      }
+    }
+
+    if (to.meta.requiresIndividual && !isIndividual) {
+      next({ name: 'dashboard' })
       return
     }
   }
