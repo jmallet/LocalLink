@@ -51,6 +51,7 @@ const handleSubmit = async () => {
           .from('individuals')
           .insert({
             user_id: data.user.id,
+            email: formData.value.email,
             first_name: formData.value.firstName,
             last_name: formData.value.lastName,
             phone: formData.value.phone || null,
