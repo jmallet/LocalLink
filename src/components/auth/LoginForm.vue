@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { signIn, signUp } from '../../stores/auth'
+import { supabase } from '../../lib/supabase'
 
 const router = useRouter()
 
@@ -10,14 +11,26 @@ const emit = defineEmits<{
 }>()
 
 const isSignup = ref(false)
+const signupStep = ref<'type' | 'form'>('type')
+const accountType = ref<'individual' | 'company'>('individual')
 const loading = ref(false)
 const error = ref('')
 
 const formData = ref({
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  firstName: '',
+  lastName: '',
+  phone: '',
+  city: '',
+  postalCode: ''
 })
+
+const selectAccountType = (type: 'individual' | 'company') => {
+  accountType.value = type
+  signupStep.value = 'form'
+}
 
 const handleSubmit = async () => {
   error.value = ''
@@ -30,8 +43,23 @@ const handleSubmit = async () => {
         return
       }
 
-      const { error: signUpError } = await signUp(formData.value.email, formData.value.password)
+      const { data, error: signUpError } = await signUp(formData.value.email, formData.value.password)
       if (signUpError) throw signUpError
+
+      if (data.user && accountType.value === 'individual') {
+        const { error: profileError } = await supabase
+          .from('individuals')
+          .insert({
+            user_id: data.user.id,
+            first_name: formData.value.firstName,
+            last_name: formData.value.lastName,
+            phone: formData.value.phone || null,
+            city: formData.value.city || null,
+            postal_code: formData.value.postalCode || null
+          })
+
+        if (profileError) throw profileError
+      }
 
       router.push({ name: 'dashboard' })
       emit('close')
@@ -51,6 +79,12 @@ const handleSubmit = async () => {
 
 const toggleMode = () => {
   isSignup.value = !isSignup.value
+  signupStep.value = 'type'
+  error.value = ''
+}
+
+const goBack = () => {
+  signupStep.value = 'type'
   error.value = ''
 }
 </script>
@@ -60,65 +94,161 @@ const toggleMode = () => {
     <div class="modal-content" @click.stop>
       <button class="close-btn" @click="emit('close')">✕</button>
 
-      <div class="modal-header">
-        <h2 class="modal-title">{{ isSignup ? 'Créer un compte' : 'Connexion' }}</h2>
-        <p class="modal-subtitle">
-          {{ isSignup ? 'Rejoignez LocalLink et connectez-vous avec des professionnels locaux' : 'Connectez-vous à votre compte' }}
+      <div v-if="isSignup && signupStep === 'type'" class="account-type-selection">
+        <div class="modal-header">
+          <h2 class="modal-title">Créer un compte</h2>
+          <p class="modal-subtitle">Choisissez votre type de compte</p>
+        </div>
+
+        <div class="account-types">
+          <button type="button" class="account-type-card" @click="selectAccountType('individual')">
+            <div class="account-type-icon">👤</div>
+            <h3>Particulier</h3>
+            <p>Je souhaite faire des demandes de devis</p>
+          </button>
+
+          <button type="button" class="account-type-card" @click="selectAccountType('company')">
+            <div class="account-type-icon">🏢</div>
+            <h3>Entreprise</h3>
+            <p>Je souhaite proposer mes services et recevoir des demandes</p>
+          </button>
+        </div>
+
+        <p class="toggle-text">
+          Vous avez déjà un compte ?
+          <button type="button" @click="toggleMode" class="toggle-btn">
+            Se connecter
+          </button>
         </p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="form">
-        <div v-if="error" class="error-banner">
-          {{ error }}
+      <div v-else>
+        <div class="modal-header">
+          <button v-if="isSignup && signupStep === 'form'" type="button" class="back-btn" @click="goBack">← Retour</button>
+          <h2 class="modal-title">
+            {{ isSignup ? (accountType === 'individual' ? 'Inscription Particulier' : 'Inscription Entreprise') : 'Connexion' }}
+          </h2>
+          <p class="modal-subtitle">
+            {{ isSignup ? 'Créez votre compte pour accéder à toutes les fonctionnalités' : 'Connectez-vous à votre compte' }}
+          </p>
         </div>
 
-        <div class="form-field">
-          <label for="email" class="form-label">Email professionnel</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            placeholder="contact@entreprise.fr"
-            required
-          />
-        </div>
+        <form @submit.prevent="handleSubmit" class="form">
+          <div v-if="error" class="error-banner">
+            {{ error }}
+          </div>
 
-        <div class="form-field">
-          <label for="password" class="form-label">Mot de passe</label>
-          <input
-            id="password"
-            v-model="formData.password"
-            type="password"
-            class="form-input"
-            placeholder="Minimum 8 caractères"
-            required
-          />
-        </div>
+          <div v-if="isSignup && accountType === 'individual'">
+            <div class="form-row">
+              <div class="form-field">
+                <label for="firstName" class="form-label">Prénom *</label>
+                <input
+                  id="firstName"
+                  v-model="formData.firstName"
+                  type="text"
+                  class="form-input"
+                  placeholder="Jean"
+                  required
+                />
+              </div>
 
-        <div v-if="isSignup" class="form-field">
-          <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
-          <input
-            id="confirmPassword"
-            v-model="formData.confirmPassword"
-            type="password"
-            class="form-input"
-            placeholder="Confirmez votre mot de passe"
-            required
-          />
-        </div>
+              <div class="form-field">
+                <label for="lastName" class="form-label">Nom *</label>
+                <input
+                  id="lastName"
+                  v-model="formData.lastName"
+                  type="text"
+                  class="form-input"
+                  placeholder="Dupont"
+                  required
+                />
+              </div>
+            </div>
 
-        <button type="submit" class="btn-submit" :disabled="loading">
-          {{ loading ? 'Chargement...' : (isSignup ? 'Créer mon compte' : 'Se connecter') }}
-        </button>
+            <div class="form-field">
+              <label for="phone" class="form-label">Téléphone</label>
+              <input
+                id="phone"
+                v-model="formData.phone"
+                type="tel"
+                class="form-input"
+                placeholder="06 12 34 56 78"
+              />
+            </div>
 
-        <p class="toggle-text">
-          {{ isSignup ? 'Vous avez déjà un compte ?' : 'Vous n\'avez pas de compte ?' }}
-          <button type="button" @click="toggleMode" class="toggle-btn">
-            {{ isSignup ? 'Se connecter' : 'Créer un compte' }}
+            <div class="form-row">
+              <div class="form-field">
+                <label for="city" class="form-label">Ville</label>
+                <input
+                  id="city"
+                  v-model="formData.city"
+                  type="text"
+                  class="form-input"
+                  placeholder="Paris"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="postalCode" class="form-label">Code postal</label>
+                <input
+                  id="postalCode"
+                  v-model="formData.postalCode"
+                  type="text"
+                  class="form-input"
+                  placeholder="75001"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="email" class="form-label">Email {{ isSignup && accountType === 'company' ? 'professionnel' : '' }} *</label>
+            <input
+              id="email"
+              v-model="formData.email"
+              type="email"
+              class="form-input"
+              :placeholder="accountType === 'company' ? 'contact@entreprise.fr' : 'votre@email.fr'"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="password" class="form-label">Mot de passe *</label>
+            <input
+              id="password"
+              v-model="formData.password"
+              type="password"
+              class="form-input"
+              placeholder="Minimum 8 caractères"
+              required
+            />
+          </div>
+
+          <div v-if="isSignup" class="form-field">
+            <label for="confirmPassword" class="form-label">Confirmer le mot de passe *</label>
+            <input
+              id="confirmPassword"
+              v-model="formData.confirmPassword"
+              type="password"
+              class="form-input"
+              placeholder="Confirmez votre mot de passe"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-submit" :disabled="loading">
+            {{ loading ? 'Chargement...' : (isSignup ? 'Créer mon compte' : 'Se connecter') }}
           </button>
-        </p>
-      </form>
+
+          <p class="toggle-text">
+            {{ isSignup ? 'Vous avez déjà un compte ?' : 'Vous n\'avez pas de compte ?' }}
+            <button type="button" @click="toggleMode" class="toggle-btn">
+              {{ isSignup ? 'Se connecter' : 'Créer un compte' }}
+            </button>
+          </p>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -273,5 +403,87 @@ const toggleMode = () => {
 
 .toggle-btn:hover {
   text-decoration: underline;
+}
+
+.account-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.account-type-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-type-card:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+.account-type-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.account-type-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.account-type-card p {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #059669;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  color: #047857;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .account-types {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

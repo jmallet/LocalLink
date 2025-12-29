@@ -27,6 +27,18 @@ export interface Company {
   updated_at: string
 }
 
+export interface Individual {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  phone?: string
+  city?: string
+  postal_code?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface ProductService {
   id: string
   company_id: string
@@ -42,7 +54,8 @@ export interface ProductService {
 
 export interface QuoteRequest {
   id: string
-  buyer_company_id: string
+  buyer_company_id?: string
+  individual_id?: string
   title: string
   description: string
   category: string
@@ -110,6 +123,7 @@ export interface CompanyWithProducts extends Company {
 
 export interface QuoteRequestWithCompany extends QuoteRequest {
   buyer_company?: Company
+  individual?: Individual
 }
 
 export interface QuoteRecipientWithDetails extends QuoteRecipient {

@@ -1,14 +1,17 @@
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
-import type { Company } from '../types/database'
+import type { Company, Individual } from '../types/database'
 
 export const user = ref<User | null>(null)
 export const session = ref<Session | null>(null)
 export const company = ref<Company | null>(null)
+export const individual = ref<Individual | null>(null)
 export const loading = ref(true)
 
 export const isAuthenticated = computed(() => !!user.value)
+export const isIndividual = computed(() => !!individual.value)
+export const isCompany = computed(() => !!company.value)
 export const isProducer = computed(() => company.value?.is_producer && company.value?.producer_active)
 export const isVerified = computed(() => company.value?.verified)
 export const isAdmin = computed(() => company.value?.role === 'admin')
@@ -22,7 +25,7 @@ export async function initAuth() {
     user.value = currentSession?.user || null
 
     if (user.value) {
-      await loadCompany()
+      await loadProfile()
     }
 
     supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -31,9 +34,10 @@ export async function initAuth() {
         user.value = newSession?.user || null
 
         if (user.value) {
-          await loadCompany()
+          await loadProfile()
         } else {
           company.value = null
+          individual.value = null
         }
       })()
     })
@@ -41,6 +45,30 @@ export async function initAuth() {
     console.error('Auth initialization error:', error)
   } finally {
     loading.value = false
+  }
+}
+
+export async function loadProfile() {
+  if (!user.value) return
+
+  try {
+    const [companyResult, individualResult] = await Promise.all([
+      supabase
+        .from('companies')
+        .select('*')
+        .eq('user_id', user.value.id)
+        .maybeSingle(),
+      supabase
+        .from('individuals')
+        .select('*')
+        .eq('user_id', user.value.id)
+        .maybeSingle()
+    ])
+
+    company.value = companyResult.data
+    individual.value = individualResult.data
+  } catch (error) {
+    console.error('Error loading profile:', error)
   }
 }
 
