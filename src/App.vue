@@ -19,7 +19,7 @@ function closeLoginModal() {
 
 function isDashboardOrAdmin(routeName: string | symbol | null | undefined): boolean {
   if (!routeName || typeof routeName !== 'string') return false
-  return routeName.startsWith('dashboard') || routeName.startsWith('admin')
+  return routeName.startsWith('dashboard') || routeName.startsWith('admin') || routeName.startsWith('individual-')
 }
 </script>
 
