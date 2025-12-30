@@ -28,11 +28,15 @@ onMounted(async () => {
 async function loadCompanies() {
   loading.value = true
   try {
-    const { data: boostedCompanyIds } = await supabase
+    const { data: boostedCompanyIds, error: boostsError } = await supabase
       .from('visibility_boosts')
       .select('company_id')
       .eq('active', true)
       .gte('end_date', new Date().toISOString().split('T')[0])
+
+    if (boostsError) {
+      console.error('Error loading visibility boosts:', boostsError)
+    }
 
     const boostedIds = boostedCompanyIds?.map(b => b.company_id) || []
 
@@ -42,7 +46,12 @@ async function loadCompanies() {
       .eq('producer_active', true)
       .eq('verified', true)
 
-    if (error) throw error
+    console.log('Companies query result:', { companies, error, count: companies?.length })
+
+    if (error) {
+      console.error('Error loading companies:', error)
+      throw error
+    }
 
     if (companies) {
       featuredCompanies.value = companies
@@ -52,6 +61,9 @@ async function loadCompanies() {
       otherCompanies.value = companies
         .filter(c => !boostedIds.includes(c.id))
         .slice(0, 6)
+
+      console.log('Featured companies:', featuredCompanies.value.length)
+      console.log('Other companies:', otherCompanies.value.length)
     }
   } catch (error) {
     console.error('Error loading companies:', error)
