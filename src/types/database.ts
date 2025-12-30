@@ -1,28 +1,31 @@
 export interface Company {
   id: string
-  user_id: string
-  email: string
+  user_id?: string
+  email?: string
   company_name: string
   siret_bce: string
+  siren?: string
   address: string
   postal_code: string
   city: string
   country: string
-  phone: string
+  phone?: string
   website?: string
-  contact_first_name: string
-  contact_last_name: string
-  contact_email: string
+  contact_first_name?: string
+  contact_last_name?: string
+  contact_email?: string
   contact_phone?: string
   is_buyer: boolean
   is_producer: boolean
   producer_active: boolean
   description?: string
-  category?: string
+  category: string
   tags: string[]
   logo_url?: string
   images: string[]
   verified: boolean
+  claimed: boolean
+  claimed_at?: string
   created_at: string
   updated_at: string
 }
