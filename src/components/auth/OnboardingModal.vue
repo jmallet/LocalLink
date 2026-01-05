@@ -42,7 +42,7 @@ const usageForm = ref({
   is_producteur: false
 })
 
-function proceedToSiret() {
+async function proceedToSiret() {
   if (!accountForm.value.email || !accountForm.value.password) {
     error.value = 'Veuillez remplir tous les champs'
     return
@@ -58,8 +58,26 @@ function proceedToSiret() {
     return
   }
 
+  loading.value = true
   error.value = ''
-  step.value = 'siret-check'
+
+  try {
+    const { data: emailExists, error: rpcError } = await supabase
+      .rpc('check_email_exists', { email_to_check: accountForm.value.email })
+
+    if (rpcError) throw rpcError
+
+    if (emailExists) {
+      error.value = 'Cet email est déjà utilisé. Veuillez vous connecter ou utiliser un autre email.'
+      return
+    }
+
+    step.value = 'siret-check'
+  } catch (err: any) {
+    error.value = err.message || 'Une erreur est survenue lors de la vérification'
+  } finally {
+    loading.value = false
+  }
 }
 
 async function checkSiret() {
@@ -277,7 +295,7 @@ function goBack() {
             :disabled="!accountForm.email || !accountForm.password || !accountForm.confirmPassword || loading"
             @click="proceedToSiret"
           >
-            Continuer
+            {{ loading ? 'Vérification...' : 'Continuer' }}
           </button>
         </div>
       </div>
