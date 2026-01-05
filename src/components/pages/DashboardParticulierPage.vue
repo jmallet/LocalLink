@@ -16,10 +16,10 @@ const loading = ref(true)
 
 const quotesByStatus = computed(() => {
   return {
-    sent: quotes.value.filter(q => q.new_status === 'SENT'),
-    viewed: quotes.value.filter(q => q.new_status === 'VIEWED'),
-    responded: quotes.value.filter(q => q.new_status === 'RESPONDED'),
-    closed: quotes.value.filter(q => q.new_status === 'CLOSED')
+    sent: quotes.value.filter(q => q.status === 'SENT'),
+    viewed: quotes.value.filter(q => q.status === 'VIEWED'),
+    responded: quotes.value.filter(q => q.status === 'RESPONDED'),
+    closed: quotes.value.filter(q => q.status === 'CLOSED')
   }
 })
 
@@ -158,8 +158,8 @@ function formatDate(dateString: string) {
               @click="viewQuoteDetail(quote.id)"
             >
               <div class="quote-header">
-                <span class="status-badge" :class="getStatusBadgeClass(quote.new_status)">
-                  {{ getStatusLabel(quote.new_status) }}
+                <span class="status-badge" :class="getStatusBadgeClass(quote.status)">
+                  {{ getStatusLabel(quote.status) }}
                 </span>
                 <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
               </div>

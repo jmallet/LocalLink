@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { user, loadCompany } from '../../stores/auth'
+import { user, loadCompanies } from '../../stores/auth'
 import type { Company } from '../../types/database'
 
 const router = useRouter()
@@ -70,7 +70,7 @@ async function claimExistingCompany() {
 
   try {
     const { error: insertError } = await supabase
-      .from('user_companies')
+      .from('company_users')
       .insert({
         user_id: user.value.id,
         company_id: foundCompany.value.id,
@@ -104,7 +104,7 @@ async function claimExistingCompany() {
       }
     }
 
-    await loadCompany()
+    await loadCompanies()
     router.push({ name: 'dashboard-pro' })
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du rattachement'
@@ -136,9 +136,7 @@ async function createAndClaimCompany() {
         city: newCompanyData.value.city,
         source: 'MANUAL',
         is_claimed: true,
-        claimed_at: new Date().toISOString(),
-        is_producer: isProducteur.value,
-        is_buyer: isAcheteurPro.value
+        claimed_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -146,7 +144,7 @@ async function createAndClaimCompany() {
     if (createError) throw createError
 
     const { error: linkError } = await supabase
-      .from('user_companies')
+      .from('company_users')
       .insert({
         user_id: user.value.id,
         company_id: newCompany.id,
@@ -166,7 +164,7 @@ async function createAndClaimCompany() {
         })
     }
 
-    await loadCompany()
+    await loadCompanies()
     router.push({ name: 'dashboard-pro' })
   } catch (err: any) {
     error.value = err.message || 'Erreur lors de la création'

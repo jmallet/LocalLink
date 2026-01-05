@@ -1,39 +1,29 @@
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
-import type { Company, Individual, User as AppUser, UserCompany } from '../types/database'
+import type { Profile, Company, CompanyUser } from '../types/database'
 
 export const user = ref<SupabaseUser | null>(null)
 export const session = ref<Session | null>(null)
-export const appUser = ref<AppUser | null>(null)
+export const profile = ref<Profile | null>(null)
 export const companies = ref<Company[]>([])
 export const currentCompany = ref<Company | null>(null)
-export const userCompanies = ref<UserCompany[]>([])
-export const individual = ref<Individual | null>(null)
+export const companyUsers = ref<CompanyUser[]>([])
 export const loading = ref(true)
 export const needsOnboarding = ref(false)
 
 export const isAuthenticated = computed(() => !!user.value)
-export const isIndividual = computed(() => !!individual.value)
-export const isCompany = computed(() => companies.value.length > 0)
-export const isProducer = computed(() => currentCompany.value?.is_producer && currentCompany.value?.producer_active)
-export const isVerified = computed(() => currentCompany.value?.verified)
-export const isAdmin = computed(() => {
-  if (!currentCompany.value) return false
-  const userCompany = userCompanies.value.find(uc => uc.company_id === currentCompany.value!.id)
-  return userCompany?.role === 'admin'
-})
-export const isOwner = computed(() => {
-  if (!currentCompany.value) return false
-  const userCompany = userCompanies.value.find(uc => uc.company_id === currentCompany.value!.id)
-  return userCompany?.role === 'owner'
+export const isParticulier = computed(() => profile.value?.user_type === 'PARTICULIER')
+export const isPro = computed(() => profile.value?.user_type === 'PRO')
+export const isAdmin = computed(() => profile.value?.user_type === 'ADMIN')
+
+export const currentCompanyUser = computed(() => {
+  if (!currentCompany.value) return null
+  return companyUsers.value.find(cu => cu.company_id === currentCompany.value!.id)
 })
 
-// Backward compatibility
-export const company = computed({
-  get: () => currentCompany.value,
-  set: (val) => { currentCompany.value = val }
-})
+export const isAcheteurPro = computed(() => currentCompanyUser.value?.is_acheteur_pro || false)
+export const isProducteur = computed(() => currentCompanyUser.value?.is_producteur || false)
 
 export async function initAuth() {
   loading.value = true
@@ -55,8 +45,7 @@ export async function initAuth() {
         if (user.value) {
           await loadProfile()
         } else {
-          company.value = null
-          individual.value = null
+          clearProfile()
         }
       })()
     })
@@ -71,82 +60,69 @@ export async function loadProfile() {
   if (!user.value) return
 
   try {
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
       .select('*')
-      .eq('id', user.value.id)
+      .eq('user_id', user.value.id)
       .maybeSingle()
 
-    if (!existingUser && !userError) {
-      const { data: newUser } = await supabase
-        .from('users')
+    if (!existingProfile && !profileError) {
+      const { data: newProfile } = await supabase
+        .from('profiles')
         .insert({
-          id: user.value.id,
-          email: user.value.email!,
+          user_id: user.value.id,
           user_type: 'PRO'
         })
         .select()
         .single()
 
-      appUser.value = newUser
+      profile.value = newProfile
       needsOnboarding.value = true
     } else {
-      appUser.value = existingUser
-      needsOnboarding.value = !existingUser?.user_type
+      profile.value = existingProfile
+      needsOnboarding.value = !existingProfile?.user_type
     }
 
-    // 2. Charger les relations user_companies
-    const { data: userCompaniesData } = await supabase
-      .from('user_companies')
-      .select('*')
-      .eq('user_id', user.value.id)
-
-    userCompanies.value = userCompaniesData || []
-
-    // 3. Charger les companies associées
-    if (userCompanies.value.length > 0) {
-      const companyIds = userCompanies.value.map(uc => uc.company_id)
-      const { data: companiesData } = await supabase
-        .from('companies')
+    if (profile.value?.user_type === 'PRO') {
+      const { data: companyUsersData } = await supabase
+        .from('company_users')
         .select('*')
-        .in('id', companyIds)
+        .eq('user_id', user.value.id)
 
-      companies.value = companiesData || []
+      companyUsers.value = companyUsersData || []
 
-      // Définir la company courante (première dans la liste par défaut)
-      if (companies.value.length > 0 && !currentCompany.value) {
-        currentCompany.value = companies.value[0]
+      if (companyUsers.value.length > 0) {
+        const companyIds = companyUsers.value.map(cu => cu.company_id)
+        const { data: companiesData } = await supabase
+          .from('companies')
+          .select('*')
+          .in('id', companyIds)
+
+        companies.value = companiesData || []
+
+        if (companies.value.length > 0 && !currentCompany.value) {
+          currentCompany.value = companies.value[0]
+        }
       }
     }
-
-    // 4. Charger le profil individual si existant
-    const { data: individualData } = await supabase
-      .from('individuals')
-      .select('*')
-      .eq('user_id', user.value.id)
-      .maybeSingle()
-
-    individual.value = individualData
   } catch (error) {
     console.error('Error loading profile:', error)
   }
 }
 
-export async function loadCompany() {
-  if (!user.value) return
+export async function loadCompanies() {
+  if (!user.value || !isPro.value) return
 
   try {
-    // Recharger les user_companies
-    const { data: userCompaniesData } = await supabase
-      .from('user_companies')
+    const { data: companyUsersData } = await supabase
+      .from('company_users')
       .select('*')
       .eq('user_id', user.value.id)
 
-    userCompanies.value = userCompaniesData || []
+    companyUsers.value = companyUsersData || []
 
-    // Recharger les companies
-    if (userCompanies.value.length > 0) {
-      const companyIds = userCompanies.value.map(uc => uc.company_id)
+    if (companyUsers.value.length > 0) {
+      const companyIds = companyUsers.value.map(cu => cu.company_id)
       const { data: companiesData, error } = await supabase
         .from('companies')
         .select('*')
@@ -155,7 +131,6 @@ export async function loadCompany() {
       if (error) throw error
       companies.value = companiesData || []
 
-      // Mettre à jour la company courante si elle existe encore
       if (currentCompany.value) {
         const updatedCurrent = companies.value.find(c => c.id === currentCompany.value!.id)
         currentCompany.value = updatedCurrent || companies.value[0] || null
@@ -164,7 +139,7 @@ export async function loadCompany() {
       }
     }
   } catch (error) {
-    console.error('Error loading company:', error)
+    console.error('Error loading companies:', error)
   }
 }
 
@@ -173,6 +148,13 @@ export function setCurrentCompany(companyId: string) {
   if (company) {
     currentCompany.value = company
   }
+}
+
+export function clearProfile() {
+  profile.value = null
+  companies.value = []
+  currentCompany.value = null
+  companyUsers.value = []
 }
 
 export async function signUp(email: string, password: string) {
@@ -196,11 +178,7 @@ export async function signOut() {
   if (!error) {
     user.value = null
     session.value = null
-    appUser.value = null
-    companies.value = []
-    currentCompany.value = null
-    userCompanies.value = []
-    individual.value = null
+    clearProfile()
   }
   return { error }
 }

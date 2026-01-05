@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, isAdmin, loading as authLoading, user, appUser } from '../stores/auth'
+import { isAuthenticated, isAdmin, loading as authLoading, user, profile } from '../stores/auth'
 import { supabase } from '../lib/supabase'
 import HomePage from '../components/pages/HomePage.vue'
 import ProsLocauxPage from '../components/pages/ProsLocauxPage.vue'
@@ -231,37 +231,17 @@ router.beforeEach(async (to, _from, next) => {
       return
     }
 
-    if (to.name === 'dashboard' && appUser.value?.user_type) {
-      if (appUser.value.user_type === 'PARTICULIER') {
+    if (to.name === 'dashboard' && profile.value?.user_type) {
+      if (profile.value.user_type === 'PARTICULIER') {
         next({ name: 'dashboard-particulier' })
         return
-      } else if (appUser.value.user_type === 'PRO') {
+      } else if (profile.value.user_type === 'PRO') {
         next({ name: 'dashboard-pro' })
         return
-      } else if (appUser.value.user_type === 'ADMIN') {
+      } else if (profile.value.user_type === 'ADMIN') {
         next({ name: 'admin' })
         return
       }
-    }
-
-    const { data: individualData } = await supabase
-      .from('individuals')
-      .select('id')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
-
-    const { data: companyData } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
-
-    const isIndividual = !!individualData
-    const isCompany = !!companyData
-
-    if (to.meta.requiresIndividual && !isIndividual) {
-      next({ name: 'dashboard' })
-      return
     }
   }
 

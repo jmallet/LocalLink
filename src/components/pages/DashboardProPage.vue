@@ -2,8 +2,8 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { user, companies, currentCompany, userCompanies, setCurrentCompany } from '../../stores/auth'
-import type { QuoteRequest, UserCompany, Company } from '../../types/database'
+import { user, companies, currentCompany, companyUsers, setCurrentCompany } from '../../stores/auth'
+import { type QuoteRequest, type CompanyUser, type Company } from '../../types/database'
 
 const router = useRouter()
 
@@ -14,7 +14,7 @@ const loading = ref(true)
 
 const currentUserCompany = computed(() => {
   if (!currentCompany.value) return null
-  return userCompanies.value.find(uc => uc.company_id === currentCompany.value!.id)
+  return companyUsers.value.find(uc => uc.company_id === currentCompany.value!.id)
 })
 
 const isAcheteur = computed(() => currentUserCompany.value?.is_acheteur_pro || false)
@@ -55,10 +55,7 @@ async function loadData() {
     if (isProducteur.value) {
       const { data: receivedData } = await supabase
         .from('quote_requests')
-        .select(`
-          *,
-          requester:users!quote_requests_requester_id_fkey(email, first_name, last_name)
-        `)
+        .select('*')
         .eq('target_company_id', currentCompany.value.id)
         .order('created_at', { ascending: false })
 
@@ -217,8 +214,8 @@ function claimNewCompany() {
               @click="viewQuoteDetail(quote.id)"
             >
               <div class="quote-header">
-                <span class="status-badge" :class="getStatusBadgeClass(quote.new_status)">
-                  {{ getStatusLabel(quote.new_status) }}
+                <span class="status-badge" :class="getStatusBadgeClass(quote.status)">
+                  {{ getStatusLabel(quote.status) }}
                 </span>
                 <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
               </div>
@@ -266,8 +263,8 @@ function claimNewCompany() {
               @click="viewQuoteDetail(quote.id)"
             >
               <div class="quote-header">
-                <span class="status-badge" :class="getStatusBadgeClass(quote.new_status)">
-                  {{ getStatusLabel(quote.new_status) }}
+                <span class="status-badge" :class="getStatusBadgeClass(quote.status)">
+                  {{ getStatusLabel(quote.status) }}
                 </span>
                 <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
               </div>

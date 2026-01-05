@@ -21,9 +21,9 @@ async function handleSubmit() {
 
   try {
     const { error: updateError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ user_type: selectedType.value })
-      .eq('id', user.value.id)
+      .eq('user_id', user.value.id)
 
     if (updateError) throw updateError
 

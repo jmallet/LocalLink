@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { initAuth, loading, needsOnboarding, appUser } from './stores/auth'
+import { initAuth, loading, needsOnboarding } from './stores/auth'
 import NavigationBar from './components/common/NavigationBar.vue'
 import Footer from './components/common/Footer.vue'
 import LoginForm from './components/auth/LoginForm.vue'
