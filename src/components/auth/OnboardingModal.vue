@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { user, loadProfile } from '../../stores/auth'
+import { loadProfile } from '../../stores/auth'
 import type { UserType } from '../../types/database'
+
+const router = useRouter()
 
 const emit = defineEmits<{
   complete: [userType: UserType]
   close: []
 }>()
 
-const selectedType = ref<UserType | null>(null)
-const step = ref<'type-selection' | 'siret-check' | 'company-confirm' | 'company-form' | 'usage-selection'>('type-selection')
+const selectedType = ref<UserType>('PRO')
+const step = ref<'account-creation' | 'siret-check' | 'company-confirm' | 'company-form' | 'usage-selection'>('account-creation')
 const loading = ref(false)
 const error = ref('')
+
+// Account credentials (for PRO)
+const accountForm = ref({
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
 
 // SIRET verification
 const siret = ref('')
@@ -32,37 +42,24 @@ const usageForm = ref({
   is_producteur: false
 })
 
-function selectType(type: UserType) {
-  selectedType.value = type
-
-  if (type === 'PARTICULIER') {
-    handleParticulierSubmit()
-  } else if (type === 'PRO') {
-    step.value = 'siret-check'
+function proceedToSiret() {
+  if (!accountForm.value.email || !accountForm.value.password) {
+    error.value = 'Veuillez remplir tous les champs'
+    return
   }
-}
 
-async function handleParticulierSubmit() {
-  if (!user.value) return
+  if (accountForm.value.password !== accountForm.value.confirmPassword) {
+    error.value = 'Les mots de passe ne correspondent pas'
+    return
+  }
 
-  loading.value = true
+  if (accountForm.value.password.length < 6) {
+    error.value = 'Le mot de passe doit contenir au moins 6 caractères'
+    return
+  }
+
   error.value = ''
-
-  try {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ user_type: 'PARTICULIER' })
-      .eq('user_id', user.value.id)
-
-    if (updateError) throw updateError
-
-    await loadProfile()
-    emit('complete', 'PARTICULIER')
-  } catch (err: any) {
-    error.value = err.message || 'Une erreur est survenue'
-  } finally {
-    loading.value = false
-  }
+  step.value = 'siret-check'
 }
 
 async function checkSiret() {
@@ -141,23 +138,31 @@ async function createCompany() {
 }
 
 async function finalizeRegistration() {
-  if (!user.value || !existingCompany.value) return
+  if (!existingCompany.value) return
 
   loading.value = true
   error.value = ''
 
   try {
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email: accountForm.value.email,
+      password: accountForm.value.password
+    })
+
+    if (signUpError) throw signUpError
+    if (!authData.user) throw new Error('Échec de création du compte')
+
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ user_type: 'PRO' })
-      .eq('user_id', user.value.id)
+      .eq('user_id', authData.user.id)
 
     if (profileError) throw profileError
 
     const { error: linkError } = await supabase
       .from('company_users')
       .insert({
-        user_id: user.value.id,
+        user_id: authData.user.id,
         company_id: existingCompany.value.id,
         is_acheteur_pro: usageForm.value.is_acheteur_pro || false,
         is_producteur: usageForm.value.is_producteur || false,
@@ -178,6 +183,7 @@ async function finalizeRegistration() {
     if (claimError) throw claimError
 
     await loadProfile()
+    router.push({ name: 'dashboard-pro' })
     emit('complete', 'PRO')
   } catch (err: any) {
     error.value = err.message || 'Une erreur est survenue lors de la finalisation'
@@ -187,9 +193,10 @@ async function finalizeRegistration() {
 }
 
 function goBack() {
-  if (step.value === 'siret-check') {
-    step.value = 'type-selection'
-    selectedType.value = null
+  if (step.value === 'account-creation') {
+    emit('close')
+  } else if (step.value === 'siret-check') {
+    step.value = 'account-creation'
     siret.value = ''
     error.value = ''
     siretStatus.value = 'not-checked'
@@ -215,39 +222,63 @@ function goBack() {
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
-      <!-- ÉTAPE 1: Sélection du type -->
-      <div v-if="step === 'type-selection'">
+      <!-- ÉTAPE 1: Création de compte -->
+      <div v-if="step === 'account-creation'">
+        <button class="back-button" @click="goBack">← Retour</button>
+
         <div class="modal-header">
-          <h2>Bienvenue sur LocalLink</h2>
-          <p>Pour commencer, dites-nous qui vous êtes</p>
+          <h2>Inscription Professionnel</h2>
+          <p>Étape 1/4 - Créez votre compte</p>
         </div>
 
-        <div class="options-container">
-          <button
-            class="option-card"
-            :class="{ selected: selectedType === 'PARTICULIER' }"
-            @click="selectType('PARTICULIER')"
-            :disabled="loading"
-          >
-            <span class="option-icon">👤</span>
-            <h3>Particulier</h3>
-            <p>Je recherche des produits ou services locaux pour mes besoins personnels</p>
-          </button>
+        <div class="form-container">
+          <div class="form-group">
+            <label for="email">Email professionnel *</label>
+            <input
+              id="email"
+              v-model="accountForm.email"
+              type="email"
+              placeholder="contact@entreprise.fr"
+              :disabled="loading"
+              @keyup.enter="proceedToSiret"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mot de passe *</label>
+            <input
+              id="password"
+              v-model="accountForm.password"
+              type="password"
+              placeholder="Minimum 6 caractères"
+              :disabled="loading"
+              @keyup.enter="proceedToSiret"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirmer le mot de passe *</label>
+            <input
+              id="confirmPassword"
+              v-model="accountForm.confirmPassword"
+              type="password"
+              placeholder="Confirmez votre mot de passe"
+              :disabled="loading"
+              @keyup.enter="proceedToSiret"
+            />
+          </div>
+
+          <div v-if="error" class="error-message">
+            {{ error }}
+          </div>
 
           <button
-            class="option-card"
-            :class="{ selected: selectedType === 'PRO' }"
-            @click="selectType('PRO')"
-            :disabled="loading"
+            class="btn-primary full-width"
+            :disabled="!accountForm.email || !accountForm.password || !accountForm.confirmPassword || loading"
+            @click="proceedToSiret"
           >
-            <span class="option-icon">🏢</span>
-            <h3>Professionnel</h3>
-            <p>Je représente une entreprise (acheteur, fournisseur ou les deux)</p>
+            Continuer
           </button>
-        </div>
-
-        <div v-if="error" class="error-message">
-          {{ error }}
         </div>
       </div>
 
@@ -257,7 +288,7 @@ function goBack() {
 
         <div class="modal-header">
           <h2>Rattachez votre entreprise</h2>
-          <p>Entrez le numéro SIRET de votre entreprise (14 chiffres)</p>
+          <p>Étape 2/4 - Entrez le numéro SIRET de votre entreprise (14 chiffres)</p>
         </div>
 
         <div class="form-container">
@@ -292,12 +323,13 @@ function goBack() {
         </div>
       </div>
 
-      <!-- ÉTAPE 2B: Confirmation entreprise trouvée -->
+      <!-- ÉTAPE 3A: Confirmation entreprise trouvée -->
       <div v-else-if="step === 'company-confirm'">
         <button class="back-button" @click="goBack">← Retour</button>
 
         <div class="modal-header">
           <h2>Est-ce votre entreprise ?</h2>
+          <p>Étape 3/4 - Confirmez votre entreprise</p>
         </div>
 
         <div class="company-info-card">
@@ -324,13 +356,13 @@ function goBack() {
         </button>
       </div>
 
-      <!-- ÉTAPE 3: Formulaire entreprise -->
+      <!-- ÉTAPE 3B: Formulaire entreprise -->
       <div v-else-if="step === 'company-form'">
         <button class="back-button" @click="goBack">← Retour</button>
 
         <div class="modal-header">
           <h2>Informations entreprise</h2>
-          <p>Cette entreprise n'est pas encore référencée.</p>
+          <p>Étape 3/4 - Cette entreprise n'est pas encore référencée</p>
         </div>
 
         <div class="form-container">
@@ -399,7 +431,7 @@ function goBack() {
 
         <div class="modal-header">
           <h2>Comment souhaitez-vous utiliser LocalProConnect ?</h2>
-          <p>Sélectionnez une ou plusieurs options</p>
+          <p>Étape 4/4 - Sélectionnez une ou plusieurs options</p>
         </div>
 
         <div class="form-container">

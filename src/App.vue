@@ -29,6 +29,11 @@ function closeOnboardingModal() {
   showOnboardingModal.value = false
 }
 
+function handleProRegistration() {
+  showLoginModal.value = false
+  showOnboardingModal.value = true
+}
+
 function handleOnboardingComplete(userType: UserType) {
   showOnboardingModal.value = false
   needsOnboarding.value = false
@@ -64,7 +69,11 @@ function isDashboardOrAdmin(routeName: string | symbol | null | undefined): bool
 
       <Footer v-if="!isDashboardOrAdmin(route.name)" />
 
-      <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
+      <LoginForm
+        v-if="showLoginModal"
+        @close="closeLoginModal"
+        @pro-registration="handleProRegistration"
+      />
       <OnboardingModal
         v-if="showOnboardingModal"
         @close="closeOnboardingModal"

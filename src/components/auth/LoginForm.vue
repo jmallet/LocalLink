@@ -8,6 +8,7 @@ const router = useRouter()
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'pro-registration'): void
 }>()
 
 const isSignup = ref(false)
@@ -29,7 +30,11 @@ const formData = ref({
 
 const selectAccountType = (type: 'individual' | 'company') => {
   accountType.value = type
-  signupStep.value = 'form'
+  if (type === 'company') {
+    emit('pro-registration')
+  } else {
+    signupStep.value = 'form'
+  }
 }
 
 const handleSubmit = async () => {
