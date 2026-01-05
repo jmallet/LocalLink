@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, isAdmin, loading as authLoading, user } from '../stores/auth'
+import { isAuthenticated, isAdmin, loading as authLoading, user, appUser } from '../stores/auth'
 import { supabase } from '../lib/supabase'
 import HomePage from '../components/pages/HomePage.vue'
 import ProsLocauxPage from '../components/pages/ProsLocauxPage.vue'
@@ -9,6 +9,9 @@ import BlogPostPage from '../components/pages/BlogPostPage.vue'
 import AboutPage from '../components/pages/AboutPage.vue'
 import ContactPage from '../components/pages/ContactPage.vue'
 import DashboardPage from '../components/pages/DashboardPage.vue'
+import DashboardParticulierPage from '../components/pages/DashboardParticulierPage.vue'
+import DashboardProPage from '../components/pages/DashboardProPage.vue'
+import ClaimCompanyPage from '../components/pages/ClaimCompanyPage.vue'
 import ProfilePage from '../components/pages/ProfilePage.vue'
 import ProductsPage from '../components/pages/ProductsPage.vue'
 import QuotesPage from '../components/pages/QuotesPage.vue'
@@ -91,6 +94,33 @@ const router = createRouter({
       component: DashboardPage,
       meta: {
         title: 'Tableau de bord - LocalLink',
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/dashboard/particulier',
+      name: 'dashboard-particulier',
+      component: DashboardParticulierPage,
+      meta: {
+        title: 'Mon espace - LocalLink',
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/dashboard/pro',
+      name: 'dashboard-pro',
+      component: DashboardProPage,
+      meta: {
+        title: 'Espace professionnel - LocalLink',
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/revendiquer-societe',
+      name: 'claim-company',
+      component: ClaimCompanyPage,
+      meta: {
+        title: 'Rattacher mon entreprise - LocalLink',
         requiresAuth: true
       }
     },
@@ -201,6 +231,19 @@ router.beforeEach(async (to, _from, next) => {
       return
     }
 
+    if (to.name === 'dashboard' && appUser.value?.user_type) {
+      if (appUser.value.user_type === 'PARTICULIER') {
+        next({ name: 'dashboard-particulier' })
+        return
+      } else if (appUser.value.user_type === 'PRO') {
+        next({ name: 'dashboard-pro' })
+        return
+      } else if (appUser.value.user_type === 'ADMIN') {
+        next({ name: 'admin' })
+        return
+      }
+    }
+
     const { data: individualData } = await supabase
       .from('individuals')
       .select('id')
@@ -215,13 +258,6 @@ router.beforeEach(async (to, _from, next) => {
 
     const isIndividual = !!individualData
     const isCompany = !!companyData
-
-    if (to.name === 'dashboard') {
-      if (isIndividual && !isCompany) {
-        next({ name: 'individual-profile' })
-        return
-      }
-    }
 
     if (to.meta.requiresIndividual && !isIndividual) {
       next({ name: 'dashboard' })

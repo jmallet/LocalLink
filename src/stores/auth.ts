@@ -11,6 +11,7 @@ export const currentCompany = ref<Company | null>(null)
 export const userCompanies = ref<UserCompany[]>([])
 export const individual = ref<Individual | null>(null)
 export const loading = ref(true)
+export const needsOnboarding = ref(false)
 
 export const isAuthenticated = computed(() => !!user.value)
 export const isIndividual = computed(() => !!individual.value)
@@ -70,7 +71,6 @@ export async function loadProfile() {
   if (!user.value) return
 
   try {
-    // 1. Créer ou récupérer l'utilisateur dans la table users
     const { data: existingUser, error: userError } = await supabase
       .from('users')
       .select('*')
@@ -82,14 +82,17 @@ export async function loadProfile() {
         .from('users')
         .insert({
           id: user.value.id,
-          email: user.value.email!
+          email: user.value.email!,
+          user_type: 'PRO'
         })
         .select()
         .single()
 
       appUser.value = newUser
+      needsOnboarding.value = true
     } else {
       appUser.value = existingUser
+      needsOnboarding.value = !existingUser?.user_type
     }
 
     // 2. Charger les relations user_companies

@@ -1,20 +1,45 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { initAuth, loading } from './stores/auth'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { initAuth, loading, needsOnboarding, appUser } from './stores/auth'
 import NavigationBar from './components/common/NavigationBar.vue'
 import Footer from './components/common/Footer.vue'
 import LoginForm from './components/auth/LoginForm.vue'
+import OnboardingModal from './components/auth/OnboardingModal.vue'
+import type { UserType } from './types/database'
 
 const route = useRoute()
+const router = useRouter()
 const showLoginModal = ref(false)
+const showOnboardingModal = ref(false)
 
 onMounted(async () => {
   await initAuth()
 })
 
+watch(needsOnboarding, (needs) => {
+  showOnboardingModal.value = needs
+})
+
 function closeLoginModal() {
   showLoginModal.value = false
+}
+
+function closeOnboardingModal() {
+  showOnboardingModal.value = false
+}
+
+function handleOnboardingComplete(userType: UserType) {
+  showOnboardingModal.value = false
+  needsOnboarding.value = false
+
+  if (userType === 'PARTICULIER') {
+    router.push({ name: 'dashboard-particulier' })
+  } else if (userType === 'PRO') {
+    router.push({ name: 'dashboard-pro' })
+  } else if (userType === 'ADMIN') {
+    router.push({ name: 'admin' })
+  }
 }
 
 function isDashboardOrAdmin(routeName: string | symbol | null | undefined): boolean {
@@ -40,6 +65,11 @@ function isDashboardOrAdmin(routeName: string | symbol | null | undefined): bool
       <Footer v-if="!isDashboardOrAdmin(route.name)" />
 
       <LoginForm v-if="showLoginModal" @close="closeLoginModal" />
+      <OnboardingModal
+        v-if="showOnboardingModal"
+        @close="closeOnboardingModal"
+        @complete="handleOnboardingComplete"
+      />
     </template>
   </div>
 </template>
