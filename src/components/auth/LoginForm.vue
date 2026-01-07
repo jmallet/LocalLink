@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { signIn, signUp } from '../../stores/auth'
+import { signIn, signUp, loadProfile } from '../../stores/auth'
 import { supabase } from '../../lib/supabase'
 
 const router = useRouter()
@@ -63,14 +63,19 @@ const handleSubmit = async () => {
           })
 
         if (profileError) throw profileError
-      }
 
-      router.push({ name: 'dashboard' })
-      emit('close')
+        await loadProfile()
+        router.push({ name: 'individual-dashboard' })
+        emit('close')
+      } else {
+        router.push({ name: 'dashboard' })
+        emit('close')
+      }
     } else {
       const { error: signInError } = await signIn(formData.value.email, formData.value.password)
       if (signInError) throw signInError
 
+      await loadProfile()
       router.push({ name: 'dashboard' })
       emit('close')
     }
