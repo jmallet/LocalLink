@@ -74,14 +74,8 @@ async function loadQuoteDetail() {
   try {
     const quoteId = route.params.id as string
 
-    const { data: individualData } = await supabase
-      .from('individuals')
-      .select('id')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
-
-    if (!individualData) {
-      error.value = 'Profil particulier non trouvé'
+    if (!user.value?.id) {
+      error.value = 'Utilisateur non connecté'
       return
     }
 
@@ -89,7 +83,7 @@ async function loadQuoteDetail() {
       .from('quote_requests')
       .select('*')
       .eq('id', quoteId)
-      .eq('individual_id', individualData.id)
+      .eq('requester_id', user.value.id)
       .maybeSingle()
 
     if (quoteError) throw quoteError

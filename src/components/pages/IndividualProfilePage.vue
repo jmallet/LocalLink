@@ -4,17 +4,15 @@ import { supabase } from '../../lib/supabase'
 import { user } from '../../stores/auth'
 import IndividualDashboardLayout from '../dashboard/IndividualDashboardLayout.vue'
 
-interface Individual {
-  id: string
-  email: string
+interface Profile {
+  user_id: string
   first_name: string
   last_name: string
   phone: string | null
-  city: string | null
-  postal_code: string | null
+  user_type: string
 }
 
-const individual = ref<Individual | null>(null)
+const profile = ref<Profile | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const message = ref('')
@@ -23,10 +21,7 @@ const error = ref('')
 const formData = ref({
   firstName: '',
   lastName: '',
-  email: '',
-  phone: '',
-  city: '',
-  postalCode: ''
+  phone: ''
 })
 
 onMounted(async () => {
@@ -37,7 +32,7 @@ async function loadProfile() {
   loading.value = true
   try {
     const { data, error: fetchError } = await supabase
-      .from('individuals')
+      .from('profiles')
       .select('*')
       .eq('user_id', user.value?.id)
       .maybeSingle()
@@ -45,14 +40,11 @@ async function loadProfile() {
     if (fetchError) throw fetchError
 
     if (data) {
-      individual.value = data
+      profile.value = data
       formData.value = {
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone || '',
-        city: data.city || '',
-        postalCode: data.postal_code || ''
+        firstName: data.first_name || '',
+        lastName: data.last_name || '',
+        phone: data.phone || ''
       }
     }
   } catch (err) {
@@ -69,21 +61,18 @@ async function handleSave() {
   saving.value = true
 
   try {
-    if (!individual.value?.id) {
-      throw new Error('Profil non trouvé')
+    if (!user.value?.id) {
+      throw new Error('Utilisateur non connecté')
     }
 
     const { error: updateError } = await supabase
-      .from('individuals')
+      .from('profiles')
       .update({
         first_name: formData.value.firstName,
         last_name: formData.value.lastName,
-        email: formData.value.email,
-        phone: formData.value.phone || null,
-        city: formData.value.city || null,
-        postal_code: formData.value.postalCode || null
+        phone: formData.value.phone || null
       })
-      .eq('id', individual.value.id)
+      .eq('user_id', user.value.id)
 
     if (updateError) throw updateError
 
@@ -144,17 +133,6 @@ async function handleSave() {
             </div>
 
             <div class="form-group">
-              <label for="email">Email *</label>
-              <input
-                id="email"
-                v-model="formData.email"
-                type="email"
-                required
-                placeholder="votre@email.fr"
-              />
-            </div>
-
-            <div class="form-group">
               <label for="phone">Téléphone</label>
               <input
                 id="phone"
@@ -162,32 +140,6 @@ async function handleSave() {
                 type="tel"
                 placeholder="06 12 34 56 78"
               />
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3>Localisation</h3>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="city">Ville</label>
-                <input
-                  id="city"
-                  v-model="formData.city"
-                  type="text"
-                  placeholder="Votre ville"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="postalCode">Code postal</label>
-                <input
-                  id="postalCode"
-                  v-model="formData.postalCode"
-                  type="text"
-                  placeholder="75001"
-                />
-              </div>
             </div>
           </div>
 

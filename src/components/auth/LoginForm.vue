@@ -53,15 +53,13 @@ const handleSubmit = async () => {
 
       if (data.user && accountType.value === 'individual') {
         const { error: profileError } = await supabase
-          .from('individuals')
+          .from('profiles')
           .insert({
             user_id: data.user.id,
-            email: formData.value.email,
+            user_type: 'PARTICULIER',
             first_name: formData.value.firstName,
             last_name: formData.value.lastName,
-            phone: formData.value.phone || null,
-            city: formData.value.city || null,
-            postal_code: formData.value.postalCode || null
+            phone: formData.value.phone || null
           })
 
         if (profileError) throw profileError

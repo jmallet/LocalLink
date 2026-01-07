@@ -68,41 +68,17 @@ async function handleSubmit() {
   message.value = ''
 
   try {
-    const { data: individualData } = await supabase
-      .from('individuals')
-      .select('id')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
-
-    if (!individualData) {
-      throw new Error('Profil particulier non trouvé')
+    if (!user.value?.id) {
+      throw new Error('Utilisateur non connecté')
     }
 
-    const { data, error: insertError } = await supabase
-      .from('quote_requests')
-      .insert({
-        individual_id: individualData.id,
-        title: formData.value.title,
-        description: formData.value.description,
-        category: formData.value.category,
-        quantity: formData.value.quantity || null,
-        deadline: formData.value.deadline || null,
-        budget_range: formData.value.budgetRange || null,
-        status: 'pending_approval'
-      })
-      .select()
-      .single()
+    error.value = 'Cette fonctionnalité nécessite de sélectionner une entreprise cible. Veuillez utiliser la page de recherche de professionnels pour envoyer une demande de devis à une entreprise spécifique.'
 
-    if (insertError) throw insertError
-
-    message.value = 'Demande créée avec succès ! Elle sera envoyée aux professionnels après validation.'
-
-    setTimeout(() => {
-      router.push({ name: 'individual-quotes' })
-    }, 2000)
   } catch (err) {
     console.error('Error creating quote:', err)
-    error.value = 'Erreur lors de la création de la demande'
+    if (!error.value) {
+      error.value = 'Erreur lors de la création de la demande'
+    }
   } finally {
     loading.value = false
   }

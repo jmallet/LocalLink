@@ -54,21 +54,15 @@ async function loadQuotes() {
   error.value = ''
 
   try {
-    const { data: individualData } = await supabase
-      .from('individuals')
-      .select('id')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
-
-    if (!individualData) {
-      error.value = 'Profil particulier non trouvé'
+    if (!user.value?.id) {
+      error.value = 'Utilisateur non connecté'
       return
     }
 
     const { data, error: fetchError } = await supabase
       .from('quote_requests')
       .select('*')
-      .eq('individual_id', individualData.id)
+      .eq('requester_id', user.value.id)
       .order('created_at', { ascending: false })
 
     if (fetchError) throw fetchError
@@ -77,7 +71,7 @@ async function loadQuotes() {
       const quotesWithCounts = await Promise.all(
         data.map(async (quote) => {
           const { count } = await supabase
-            .from('quote_recipients')
+            .from('quote_messages')
             .select('*', { count: 'exact', head: true })
             .eq('quote_request_id', quote.id)
 
