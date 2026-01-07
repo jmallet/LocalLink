@@ -22,6 +22,12 @@ import IndividualQuotesListPage from '../components/pages/IndividualQuotesListPa
 import IndividualNewQuotePage from '../components/pages/IndividualNewQuotePage.vue'
 import IndividualQuoteDetailPage from '../components/pages/IndividualQuoteDetailPage.vue'
 import IndividualDashboardPage from '../components/pages/IndividualDashboardPage.vue'
+import ProDashboardOverviewPage from '../components/pages/ProDashboardOverviewPage.vue'
+import ProReceivedQuotesPage from '../components/pages/ProReceivedQuotesPage.vue'
+import ProSentQuotesPage from '../components/pages/ProSentQuotesPage.vue'
+import ProCompanyProfilePage from '../components/pages/ProCompanyProfilePage.vue'
+import ProSettingsPage from '../components/pages/ProSettingsPage.vue'
+import ProQuoteDetailPage from '../components/pages/ProQuoteDetailPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -220,6 +226,66 @@ const router = createRouter({
         requiresAuth: true,
         requiresIndividual: true
       }
+    },
+    {
+      path: '/dashboard/pro',
+      name: 'pro-dashboard',
+      component: ProDashboardOverviewPage,
+      meta: {
+        title: 'Tableau de bord - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
+    },
+    {
+      path: '/dashboard/pro/devis-recus',
+      name: 'pro-received-quotes',
+      component: ProReceivedQuotesPage,
+      meta: {
+        title: 'Devis reçus - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
+    },
+    {
+      path: '/dashboard/pro/devis-envoyes',
+      name: 'pro-sent-quotes',
+      component: ProSentQuotesPage,
+      meta: {
+        title: 'Devis envoyés - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
+    },
+    {
+      path: '/dashboard/pro/fiche-entreprise',
+      name: 'pro-company-profile',
+      component: ProCompanyProfilePage,
+      meta: {
+        title: 'Ma fiche entreprise - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
+    },
+    {
+      path: '/dashboard/pro/parametres',
+      name: 'pro-settings',
+      component: ProSettingsPage,
+      meta: {
+        title: 'Paramètres - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
+    },
+    {
+      path: '/dashboard/pro/devis/:id',
+      name: 'pro-quote-detail',
+      component: ProQuoteDetailPage,
+      meta: {
+        title: 'Détail du devis - LocalLink',
+        requiresAuth: true,
+        requiresPro: true
+      }
     }
   ],
   scrollBehavior(to, from, savedPosition) {
@@ -247,13 +313,18 @@ router.beforeEach(async (to, _from, next) => {
         next({ name: 'individual-dashboard' })
         return
       } else if (profile.value.user_type === 'PRO') {
-        next({ name: 'dashboard-pro' })
+        next({ name: 'pro-dashboard' })
         return
       } else if (profile.value.user_type === 'ADMIN') {
         next({ name: 'admin' })
         return
       }
     }
+  }
+
+  if (to.meta.requiresPro && profile.value?.user_type !== 'PRO') {
+    next({ name: 'dashboard' })
+    return
   }
 
   if (to.meta.requiresAdmin && !isAdmin.value) {

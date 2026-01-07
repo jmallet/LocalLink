@@ -1,20 +1,31 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { signOut, user } from '../../stores/auth'
+import { signOut, user, currentCompanyUser } from '../../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 
 const mobileMenuOpen = ref(false)
 
-const menuItems = [
-  { name: 'dashboard' as const, label: 'Tableau de bord', icon: '📊' },
-  { name: 'dashboard-profile' as const, label: 'Mon profil', icon: '🏢' },
-  { name: 'dashboard-products' as const, label: 'Produits & Services', icon: '📦' },
-  { name: 'dashboard-quotes' as const, label: 'Demandes de devis', icon: '📋' },
-  { name: 'dashboard-visibility' as const, label: 'Visibilité', icon: '⭐' },
-]
+const menuItems = computed(() => {
+  const items = [
+    { name: 'pro-dashboard' as const, label: 'Tableau de bord', icon: '📊' },
+  ]
+
+  if (currentCompanyUser.value?.is_producteur) {
+    items.push({ name: 'pro-received-quotes' as const, label: 'Devis reçus', icon: '📥' })
+  }
+
+  items.push(
+    { name: 'pro-sent-quotes' as const, label: 'Devis envoyés', icon: '📤' },
+    { name: 'pro-company-profile' as const, label: 'Ma fiche entreprise', icon: '🏢' },
+    { name: 'dashboard-products' as const, label: 'Produits & Services', icon: '📦' },
+    { name: 'pro-settings' as const, label: 'Paramètres', icon: '⚙️' }
+  )
+
+  return items
+})
 
 async function handleSignOut() {
   await signOut()
