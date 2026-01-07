@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { isAuthenticated } from '../../stores/auth'
 import type { Company } from '../../types/database'
 import CompanyCard from '../common/CompanyCard.vue'
 import SearchFilters from '../common/SearchFilters.vue'
@@ -14,14 +13,9 @@ const loading = ref(true)
 const searchQuery = ref('')
 const selectedCategory = ref('all')
 const selectedCity = ref('all')
-const showLoginModal = ref(false)
 
 const filteredCompanies = computed(() => {
   let result = companies.value
-
-  if (selectedCategory.value !== 'all') {
-    result = result.filter(c => c.category === selectedCategory.value)
-  }
 
   if (selectedCity.value !== 'all') {
     result = result.filter(c => c.city === selectedCity.value)
@@ -30,9 +24,10 @@ const filteredCompanies = computed(() => {
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(c =>
-      c.company_name.toLowerCase().includes(query) ||
+      c.name.toLowerCase().includes(query) ||
       c.description?.toLowerCase().includes(query) ||
-      c.tags.some(tag => tag.toLowerCase().includes(query))
+      c.city?.toLowerCase().includes(query) ||
+      c.naf_code?.toLowerCase().includes(query)
     )
   }
 
@@ -40,14 +35,11 @@ const filteredCompanies = computed(() => {
 })
 
 const displayedCompanies = computed(() => {
-  if (!isAuthenticated.value) {
-    return filteredCompanies.value.slice(0, 3)
-  }
   return filteredCompanies.value
 })
 
 const showViewMore = computed(() => {
-  return !isAuthenticated.value && filteredCompanies.value.length > 3
+  return false
 })
 
 onMounted(async () => {
@@ -59,10 +51,13 @@ async function loadCompanies() {
   try {
     const { data, error } = await supabase
       .from('companies')
-      .select('*')
-      .eq('producer_active', true)
-      .eq('verified', true)
-      .order('company_name')
+      .select(`
+        *,
+        producer_profiles!inner(is_active)
+      `)
+      .eq('is_claimed', true)
+      .eq('producer_profiles.is_active', true)
+      .order('name')
 
     if (error) throw error
     companies.value = data || []
@@ -78,15 +73,7 @@ function handleCompanyClick(company: Company) {
 }
 
 function handleContact(company: Company) {
-  if (!isAuthenticated.value) {
-    showLoginModal.value = true
-  } else {
-    router.push({ name: 'company-detail', params: { id: company.id } })
-  }
-}
-
-function handleViewMore() {
-  showLoginModal.value = true
+  router.push({ name: 'company-detail', params: { id: company.id } })
 }
 </script>
 
@@ -114,9 +101,6 @@ function handleViewMore() {
             {{ filteredCompanies.length }}
             {{ filteredCompanies.length > 1 ? 'entreprises trouvées' : 'entreprise trouvée' }}
           </h2>
-          <p v-if="!isAuthenticated" class="auth-notice">
-            ℹ️ Connectez-vous pour voir tous les professionnels
-          </p>
         </div>
 
         <div v-if="loading" class="loading-container">

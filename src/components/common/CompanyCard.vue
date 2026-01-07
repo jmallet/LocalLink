@@ -21,30 +21,24 @@ const emit = defineEmits<{
     <div class="company-image">
       <img
         :src="company.logo_url || 'https://images.pexels.com/photos/6802042/pexels-photo-6802042.jpeg'"
-        :alt="company.company_name"
+        :alt="company.name"
       />
     </div>
 
     <div class="company-content">
-      <h3 class="company-name">{{ company.company_name }}</h3>
+      <h3 class="company-name">{{ company.name }}</h3>
 
-      <div class="company-category">
-        <span class="category-badge">{{ company.category }}</span>
+      <div v-if="company.naf_code" class="company-category">
+        <span class="category-badge">{{ company.naf_code }}</span>
       </div>
 
-      <p class="company-description">
-        {{ company.description?.substring(0, 120) }}{{ company.description && company.description.length > 120 ? '...' : '' }}
+      <p v-if="company.description" class="company-description">
+        {{ company.description.substring(0, 120) }}{{ company.description.length > 120 ? '...' : '' }}
       </p>
 
-      <div class="company-location">
+      <div v-if="company.city" class="company-location">
         <span class="location-icon">📍</span>
-        {{ company.city }}, {{ company.postal_code }}
-      </div>
-
-      <div class="company-tags">
-        <span v-for="tag in company.tags.slice(0, 3)" :key="tag" class="tag">
-          {{ tag }}
-        </span>
+        {{ company.city }}{{ company.postal_code ? ', ' + company.postal_code : '' }}
       </div>
 
       <button
