@@ -9,9 +9,9 @@ const router = useRouter()
 const mobileMenuOpen = ref(false)
 
 const menuItems = [
+  { name: 'individual-dashboard' as const, label: 'Tableau de bord', icon: '📊' },
   { name: 'individual-profile' as const, label: 'Mon profil', icon: '👤' },
   { name: 'individual-quotes' as const, label: 'Mes demandes de devis', icon: '📋' },
-  { name: 'individual-new-quote' as const, label: 'Recherche de devis', icon: '🔍' },
 ]
 
 async function handleSignOut() {

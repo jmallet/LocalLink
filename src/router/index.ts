@@ -21,6 +21,7 @@ import IndividualProfilePage from '../components/pages/IndividualProfilePage.vue
 import IndividualQuotesListPage from '../components/pages/IndividualQuotesListPage.vue'
 import IndividualNewQuotePage from '../components/pages/IndividualNewQuotePage.vue'
 import IndividualQuoteDetailPage from '../components/pages/IndividualQuoteDetailPage.vue'
+import IndividualDashboardPage from '../components/pages/IndividualDashboardPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -171,6 +172,16 @@ const router = createRouter({
       }
     },
     {
+      path: '/particulier/tableau-de-bord',
+      name: 'individual-dashboard',
+      component: IndividualDashboardPage,
+      meta: {
+        title: 'Tableau de bord - LocalLink',
+        requiresAuth: true,
+        requiresIndividual: true
+      }
+    },
+    {
       path: '/particulier/profil',
       name: 'individual-profile',
       component: IndividualProfilePage,
@@ -233,7 +244,7 @@ router.beforeEach(async (to, _from, next) => {
 
     if (to.name === 'dashboard' && profile.value?.user_type) {
       if (profile.value.user_type === 'PARTICULIER') {
-        next({ name: 'dashboard-particulier' })
+        next({ name: 'individual-dashboard' })
         return
       } else if (profile.value.user_type === 'PRO') {
         next({ name: 'dashboard-pro' })
