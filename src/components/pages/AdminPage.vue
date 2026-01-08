@@ -41,7 +41,7 @@ async function loadDashboardData() {
 
     const [usersRes, companiesRes, quotesRes, producersRes] = await Promise.all([
       supabase.rpc('get_admin_user_list'),
-      supabase.from('companies').select('*'),
+      supabase.rpc('get_admin_company_list'),
       supabase.from('quote_requests').select(`
         *,
         requester:profiles!quote_requests_requester_id_fkey(user_id, first_name, last_name, user_type),
@@ -144,6 +144,38 @@ function viewCompanyDetails(company: any) {
   selectedCompany.value = company
   showCompanyModal.value = true
   message.value = { type: '', text: '' }
+}
+
+async function toggleCompanyVerification(companyId: string, currentStatus: boolean) {
+  actionLoading.value = true
+  message.value = { type: '', text: '' }
+
+  try {
+    const { data, error } = await supabase.rpc('admin_toggle_company_verification', {
+      company_id_param: companyId,
+      new_verified_status: !currentStatus
+    })
+
+    if (error) throw error
+
+    message.value = {
+      type: 'success',
+      text: !currentStatus ? 'Société vérifiée avec succès' : 'Vérification révoquée'
+    }
+
+    await loadDashboardData()
+
+    if (selectedCompany.value && selectedCompany.value.id === companyId) {
+      selectedCompany.value.verified = !currentStatus
+    }
+  } catch (error: any) {
+    message.value = {
+      type: 'error',
+      text: error.message || 'Une erreur est survenue'
+    }
+  } finally {
+    actionLoading.value = false
+  }
 }
 
 async function deleteCompany(companyId: string) {
@@ -483,6 +515,9 @@ async function deleteQuote(quoteId: string) {
                   <span class="claim-badge" :class="company.is_claimed ? 'claimed' : 'unclaimed'">
                     {{ company.is_claimed ? 'Revendiquée' : 'Non revendiquée' }}
                   </span>
+                  <span class="verification-badge" :class="company.verified ? 'verified' : 'pending'">
+                    {{ company.verified ? 'Vérifiée' : 'Non vérifiée' }}
+                  </span>
                   <button class="btn-action" @click.stop="viewCompanyDetails(company)">
                     Voir / Éditer
                   </button>
@@ -502,9 +537,14 @@ async function deleteQuote(quoteId: string) {
 
           <div class="modal-header-content">
             <h2>{{ selectedCompany.name }}</h2>
-            <span class="claim-badge" :class="selectedCompany.is_claimed ? 'claimed' : 'unclaimed'">
-              {{ selectedCompany.is_claimed ? 'Revendiquée' : 'Non revendiquée' }}
-            </span>
+            <div class="badges-group">
+              <span class="claim-badge" :class="selectedCompany.is_claimed ? 'claimed' : 'unclaimed'">
+                {{ selectedCompany.is_claimed ? 'Revendiquée' : 'Non revendiquée' }}
+              </span>
+              <span class="verification-badge" :class="selectedCompany.verified ? 'verified' : 'pending'">
+                {{ selectedCompany.verified ? 'Vérifiée' : 'Non vérifiée' }}
+              </span>
+            </div>
           </div>
 
           <div v-if="message.text" class="message-banner" :class="message.type">
@@ -561,6 +601,14 @@ async function deleteQuote(quoteId: string) {
           </div>
 
           <div class="modal-actions">
+            <button
+              class="btn-verify"
+              :class="{ 'btn-unverify': selectedCompany.verified }"
+              :disabled="actionLoading"
+              @click="toggleCompanyVerification(selectedCompany.id, selectedCompany.verified)"
+            >
+              {{ selectedCompany.verified ? 'Retirer la vérification' : 'Marquer comme vérifiée' }}
+            </button>
             <button class="btn-delete" :disabled="actionLoading" @click="deleteCompany(selectedCompany.id)">
               Supprimer
             </button>
@@ -1145,16 +1193,19 @@ async function deleteQuote(quoteId: string) {
 .modal-header-content {
   margin-bottom: 24px;
   padding-right: 40px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .modal-header-content h2 {
   font-size: 24px;
   font-weight: 700;
   color: #111827;
-  margin: 0;
+  margin: 0 0 12px 0;
+}
+
+.badges-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .company-details-grid {
@@ -1235,6 +1286,14 @@ async function deleteQuote(quoteId: string) {
 .btn-verify:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-unverify {
+  background: #f59e0b;
+}
+
+.btn-unverify:hover:not(:disabled) {
+  background: #d97706;
 }
 
 .btn-delete {
