@@ -126,38 +126,10 @@ async function createCompany() {
     return
   }
 
-  loading.value = true
-  error.value = ''
-
-  try {
-    const { data: newCompany, error: companyError } = await supabase
-      .from('companies')
-      .insert({
-        name: companyForm.value.name,
-        siret: siret.value,
-        siren: siret.value.substring(0, 9),
-        postal_code: companyForm.value.postal_code,
-        city: companyForm.value.city,
-        source: 'MANUAL',
-        is_claimed: false
-      })
-      .select()
-      .single()
-
-    if (companyError) throw companyError
-
-    existingCompany.value = newCompany
-    step.value = 'usage-selection'
-  } catch (err: any) {
-    error.value = err.message || 'Une erreur est survenue lors de la création'
-  } finally {
-    loading.value = false
-  }
+  step.value = 'usage-selection'
 }
 
 async function finalizeRegistration() {
-  if (!existingCompany.value) return
-
   loading.value = true
   error.value = ''
 
@@ -177,11 +149,43 @@ async function finalizeRegistration() {
 
     if (profileError) throw profileError
 
+    let companyId = existingCompany.value?.id
+
+    if (siretStatus.value === 'new') {
+      const { data: newCompany, error: companyError } = await supabase
+        .from('companies')
+        .insert({
+          name: companyForm.value.name,
+          siret: siret.value,
+          siren: siret.value.substring(0, 9),
+          postal_code: companyForm.value.postal_code,
+          city: companyForm.value.city,
+          source: 'MANUAL',
+          is_claimed: true,
+          claimed_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (companyError) throw companyError
+      companyId = newCompany.id
+    } else {
+      const { error: claimError } = await supabase
+        .from('companies')
+        .update({
+          is_claimed: true,
+          claimed_at: new Date().toISOString()
+        })
+        .eq('id', companyId)
+
+      if (claimError) throw claimError
+    }
+
     const { error: linkError } = await supabase
       .from('company_users')
       .insert({
         user_id: authData.user.id,
-        company_id: existingCompany.value.id,
+        company_id: companyId,
         is_acheteur_pro: usageForm.value.is_acheteur_pro || false,
         is_producteur: usageForm.value.is_producteur || false,
         verified: true,
@@ -189,16 +193,6 @@ async function finalizeRegistration() {
       })
 
     if (linkError) throw linkError
-
-    const { error: claimError } = await supabase
-      .from('companies')
-      .update({
-        is_claimed: true,
-        claimed_at: new Date().toISOString()
-      })
-      .eq('id', existingCompany.value.id)
-
-    if (claimError) throw claimError
 
     await loadProfile()
     router.push({ name: 'dashboard-pro' })
