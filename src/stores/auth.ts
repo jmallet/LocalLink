@@ -80,7 +80,9 @@ export async function loadProfile() {
       needsOnboarding.value = true
     } else {
       profile.value = existingProfile
-      needsOnboarding.value = !existingProfile?.user_type
+      const hasUserType = !!existingProfile?.user_type
+      const hasBasicInfo = existingProfile?.first_name && existingProfile?.last_name
+      needsOnboarding.value = !hasUserType || !hasBasicInfo
     }
 
     if (profile.value?.user_type === 'PRO') {

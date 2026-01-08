@@ -18,7 +18,9 @@ onMounted(async () => {
 })
 
 watch(needsOnboarding, (needs) => {
-  showOnboardingModal.value = needs
+  if (needs && !showOnboardingModal.value) {
+    showOnboardingModal.value = true
+  }
 })
 
 function closeLoginModal() {
@@ -27,6 +29,7 @@ function closeLoginModal() {
 
 function closeOnboardingModal() {
   showOnboardingModal.value = false
+  needsOnboarding.value = false
 }
 
 function handleProRegistration() {
