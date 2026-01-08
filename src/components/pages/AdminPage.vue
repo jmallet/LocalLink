@@ -38,10 +38,7 @@ async function loadDashboardData() {
   loading.value = true
   try {
     const [usersRes, companiesRes, quotesRes, producersRes] = await Promise.all([
-      supabase.from('profiles').select(`
-        *,
-        auth_user:user_id (email)
-      `),
+      supabase.rpc('get_admin_user_list'),
       supabase.from('companies').select('*'),
       supabase.from('quote_requests').select(`
         *,
@@ -355,7 +352,7 @@ async function deleteQuote(quoteId: string) {
             <div v-for="userItem in allUsers" :key="userItem.user_id" class="table-row clickable" @click="viewUserDetails(userItem)">
               <div class="row-main">
                 <div class="user-info">
-                  <span class="user-email">{{ userItem.auth_user?.[0]?.email || 'Email non disponible' }}</span>
+                  <span class="user-email">{{ userItem.email || 'Email non disponible' }}</span>
                   <span class="user-name">{{ userItem.first_name }} {{ userItem.last_name }}</span>
                 </div>
                 <div class="row-meta">
@@ -378,7 +375,7 @@ async function deleteQuote(quoteId: string) {
           <button class="close-btn" @click="showUserModal = false">✕</button>
 
           <div class="modal-header-content">
-            <h2>{{ selectedUser.auth_user?.[0]?.email || 'Utilisateur' }}</h2>
+            <h2>{{ selectedUser.email || 'Utilisateur' }}</h2>
             <span class="user-type-badge" :class="getUserTypeBadgeClass(selectedUser.user_type)">
               {{ getUserTypeLabel(selectedUser.user_type) }}
             </span>
@@ -399,7 +396,7 @@ async function deleteQuote(quoteId: string) {
             </div>
             <div class="detail-row">
               <span class="detail-label">Email</span>
-              <span class="detail-value">{{ selectedUser.auth_user?.[0]?.email || 'Non disponible' }}</span>
+              <span class="detail-value">{{ selectedUser.email || 'Non disponible' }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Téléphone</span>
