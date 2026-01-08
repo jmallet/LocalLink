@@ -37,6 +37,8 @@ onMounted(async () => {
 async function loadDashboardData() {
   loading.value = true
   try {
+    console.log('Loading admin dashboard data...')
+
     const [usersRes, companiesRes, quotesRes, producersRes] = await Promise.all([
       supabase.rpc('get_admin_user_list'),
       supabase.from('companies').select('*'),
@@ -47,6 +49,10 @@ async function loadDashboardData() {
       `),
       supabase.from('producer_profiles').select('id, company_id').eq('is_active', true)
     ])
+
+    console.log('Users RPC result:', usersRes)
+    console.log('Users data:', usersRes.data)
+    console.log('Users error:', usersRes.error)
 
     const users = usersRes.data || []
     const companies = companiesRes.data || []
