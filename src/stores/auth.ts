@@ -80,6 +80,7 @@ export async function loadProfile() {
       needsOnboarding.value = true
     } else {
       profile.value = existingProfile
+      needsOnboarding.value = false
     }
 
     if (profile.value?.user_type === 'PRO') {
@@ -103,14 +104,6 @@ export async function loadProfile() {
           currentCompany.value = companies.value[0]
         }
       }
-
-      if (existingProfile && companyUsers.value.length === 0) {
-        needsOnboarding.value = true
-      } else {
-        needsOnboarding.value = false
-      }
-    } else if (profile.value?.user_type === 'PARTICULIER' || profile.value?.user_type === 'ADMIN') {
-      needsOnboarding.value = false
     }
   } catch (error) {
     console.error('Error loading profile:', error)
