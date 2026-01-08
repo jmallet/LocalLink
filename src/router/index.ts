@@ -322,7 +322,12 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
-  if (to.meta.requiresPro && profile.value?.user_type !== 'PRO') {
+  if (to.meta.requiresPro && profile.value?.user_type !== 'PRO' && profile.value?.user_type !== 'ADMIN') {
+    next({ name: 'dashboard' })
+    return
+  }
+
+  if (to.meta.requiresIndividual && profile.value?.user_type !== 'PARTICULIER' && profile.value?.user_type !== 'ADMIN') {
     next({ name: 'dashboard' })
     return
   }

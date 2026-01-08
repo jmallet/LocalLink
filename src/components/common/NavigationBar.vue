@@ -25,12 +25,12 @@ async function checkAdminStatus() {
   }
 
   const { data } = await supabase
-    .from('companies')
-    .select('role')
+    .from('profiles')
+    .select('user_type')
     .eq('user_id', user.value.id)
     .maybeSingle()
 
-  isAdmin.value = data?.role === 'admin'
+  isAdmin.value = data?.user_type === 'ADMIN'
 }
 
 onMounted(() => {
