@@ -28,42 +28,23 @@ onMounted(async () => {
 async function loadCompanies() {
   loading.value = true
   try {
-    const { data: boostedCompanyIds, error: boostsError } = await supabase
-      .from('visibility_boosts')
-      .select('company_id')
-      .eq('active', true)
-      .gte('end_date', new Date().toISOString().split('T')[0])
-
-    if (boostsError) {
-      console.error('Error loading visibility boosts:', boostsError)
-    }
-
-    const boostedIds = boostedCompanyIds?.map(b => b.company_id) || []
-
-    const { data: companies, error } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('producer_active', true)
-      .eq('verified', true)
-
-    console.log('Companies query result:', { companies, error, count: companies?.length })
+    const { data: producerProfiles, error } = await supabase
+      .from('producer_profiles')
+      .select('company_id, companies(*)')
+      .eq('is_active', true)
 
     if (error) {
       console.error('Error loading companies:', error)
       throw error
     }
 
-    if (companies) {
-      featuredCompanies.value = companies
-        .filter(c => boostedIds.includes(c.id))
-        .slice(0, 3)
+    if (producerProfiles) {
+      const companies = producerProfiles
+        .map(p => p.companies)
+        .filter(c => c !== null)
 
-      otherCompanies.value = companies
-        .filter(c => !boostedIds.includes(c.id))
-        .slice(0, 6)
-
-      console.log('Featured companies:', featuredCompanies.value.length)
-      console.log('Other companies:', otherCompanies.value.length)
+      featuredCompanies.value = []
+      otherCompanies.value = companies.slice(0, 9)
     }
   } catch (error) {
     console.error('Error loading companies:', error)
