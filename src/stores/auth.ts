@@ -80,9 +80,6 @@ export async function loadProfile() {
       needsOnboarding.value = true
     } else {
       profile.value = existingProfile
-      const hasUserType = !!existingProfile?.user_type
-      const hasBasicInfo = existingProfile?.first_name && existingProfile?.last_name
-      needsOnboarding.value = !hasUserType || !hasBasicInfo
     }
 
     if (profile.value?.user_type === 'PRO') {
@@ -106,6 +103,14 @@ export async function loadProfile() {
           currentCompany.value = companies.value[0]
         }
       }
+
+      if (existingProfile && companyUsers.value.length === 0) {
+        needsOnboarding.value = true
+      } else {
+        needsOnboarding.value = false
+      }
+    } else if (profile.value?.user_type === 'PARTICULIER' || profile.value?.user_type === 'ADMIN') {
+      needsOnboarding.value = false
     }
   } catch (error) {
     console.error('Error loading profile:', error)
