@@ -182,3 +182,8 @@ export async function signOut() {
   }
   return { error }
 }
+
+export async function refreshProfile() {
+  if (!user.value) return
+  await loadProfile()
+}

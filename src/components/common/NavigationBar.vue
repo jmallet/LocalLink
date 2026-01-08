@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { isAuthenticated, signOut, user } from '../../stores/auth'
+import { isAuthenticated, signOut, user, refreshProfile } from '../../stores/auth'
 import { supabase } from '../../lib/supabase'
 
 const router = useRouter()
@@ -33,6 +33,11 @@ async function checkAdminStatus() {
   isAdmin.value = data?.user_type === 'ADMIN'
 }
 
+const handleDashboardClick = async () => {
+  await refreshProfile()
+  router.push({ name: 'dashboard' })
+}
+
 onMounted(() => {
   checkAdminStatus()
 })
@@ -56,10 +61,10 @@ onMounted(() => {
 
       <div class="nav-actions">
         <template v-if="isAuthenticated">
-          <button v-if="isAdmin" class="btn-admin" @click="router.push({ name: 'admin' })">
+          <button v-if="isAdmin" class="btn-admin" @click="handleDashboardClick">
             Admin
           </button>
-          <button class="btn-secondary" @click="router.push({ name: 'dashboard' })">
+          <button class="btn-secondary" @click="handleDashboardClick">
             Dashboard
           </button>
           <button class="btn-secondary" @click="handleSignOut">
