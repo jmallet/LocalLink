@@ -105,7 +105,7 @@ async function claimExistingCompany() {
     }
 
     await loadCompanies()
-    router.push({ name: 'dashboard-pro' })
+    router.push({ name: 'pro-dashboard' })
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du rattachement'
   } finally {
@@ -165,7 +165,7 @@ async function createAndClaimCompany() {
     }
 
     await loadCompanies()
-    router.push({ name: 'dashboard-pro' })
+    router.push({ name: 'pro-dashboard' })
   } catch (err: any) {
     error.value = err.message || 'Erreur lors de la création'
   } finally {

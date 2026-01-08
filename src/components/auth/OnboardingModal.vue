@@ -195,7 +195,7 @@ async function finalizeRegistration() {
     if (linkError) throw linkError
 
     await loadProfile()
-    router.push({ name: 'dashboard-pro' })
+    router.push({ name: 'pro-dashboard' })
     emit('complete', 'PRO')
   } catch (err: any) {
     error.value = err.message || 'Une erreur est survenue lors de la finalisation'

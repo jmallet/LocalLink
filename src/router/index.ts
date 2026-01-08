@@ -9,8 +9,6 @@ import BlogPostPage from '../components/pages/BlogPostPage.vue'
 import AboutPage from '../components/pages/AboutPage.vue'
 import ContactPage from '../components/pages/ContactPage.vue'
 import DashboardPage from '../components/pages/DashboardPage.vue'
-import DashboardParticulierPage from '../components/pages/DashboardParticulierPage.vue'
-import DashboardProPage from '../components/pages/DashboardProPage.vue'
 import ClaimCompanyPage from '../components/pages/ClaimCompanyPage.vue'
 import ProfilePage from '../components/pages/ProfilePage.vue'
 import ProductsPage from '../components/pages/ProductsPage.vue'
@@ -101,24 +99,6 @@ const router = createRouter({
       component: DashboardPage,
       meta: {
         title: 'Tableau de bord - LocalLink',
-        requiresAuth: true
-      }
-    },
-    {
-      path: '/dashboard/particulier',
-      name: 'dashboard-particulier',
-      component: DashboardParticulierPage,
-      meta: {
-        title: 'Mon espace - LocalLink',
-        requiresAuth: true
-      }
-    },
-    {
-      path: '/dashboard/pro',
-      name: 'dashboard-pro',
-      component: DashboardProPage,
-      meta: {
-        title: 'Espace professionnel - LocalLink',
         requiresAuth: true
       }
     },

@@ -42,9 +42,9 @@ function handleOnboardingComplete(userType: UserType) {
   needsOnboarding.value = false
 
   if (userType === 'PARTICULIER') {
-    router.push({ name: 'dashboard-particulier' })
+    router.push({ name: 'individual-dashboard' })
   } else if (userType === 'PRO') {
-    router.push({ name: 'dashboard-pro' })
+    router.push({ name: 'pro-dashboard' })
   } else if (userType === 'ADMIN') {
     router.push({ name: 'admin' })
   }
