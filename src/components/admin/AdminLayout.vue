@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { isAuthenticated, user, signOut } from '../../stores/auth'
-import { supabase } from '../../lib/supabase'
+import { isAuthenticated, user, signOut, isAdmin as isUserAdmin, loading as authLoading } from '../../stores/auth'
 
 const router = useRouter()
 
 const currentPage = ref('dashboard')
-const isAdmin = ref(false)
 const loading = ref(true)
 
 const menuItems = [
@@ -29,15 +27,11 @@ onMounted(async () => {
 async function checkAdminStatus() {
   loading.value = true
   try {
-    const { data } = await supabase
-      .from('companies')
-      .select('role')
-      .eq('user_id', user.value?.id)
-      .maybeSingle()
+    while (authLoading.value) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
 
-    isAdmin.value = data?.role === 'admin'
-
-    if (!isAdmin.value) {
+    if (!isUserAdmin.value) {
       router.push({ name: 'home' })
     }
   } catch (error) {
@@ -64,7 +58,7 @@ async function handleSignOut() {
     <p>Vérification des permissions...</p>
   </div>
 
-  <div v-else-if="isAdmin" class="admin-layout">
+  <div v-else-if="isUserAdmin" class="admin-layout">
     <aside class="admin-sidebar">
       <div class="sidebar-header">
         <router-link to="/" class="brand">
