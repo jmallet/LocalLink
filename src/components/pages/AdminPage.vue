@@ -4,32 +4,27 @@ import { supabase } from '../../lib/supabase'
 import AdminLayout from '../admin/AdminLayout.vue'
 
 interface Stats {
+  totalUsers: number
   totalCompanies: number
-  verifiedCompanies: number
-  pendingCompanies: number
   totalQuotes: number
-  pendingQuotes: number
-  totalPosts: number
-  publishedPosts: number
+  activeProducers: number
 }
 
 const stats = ref<Stats>({
+  totalUsers: 0,
   totalCompanies: 0,
-  verifiedCompanies: 0,
-  pendingCompanies: 0,
   totalQuotes: 0,
-  pendingQuotes: 0,
-  totalPosts: 0,
-  publishedPosts: 0
+  activeProducers: 0
 })
 
-const recentCompanies = ref<any[]>([])
-const recentQuotes = ref<any[]>([])
+const allUsers = ref<any[]>([])
 const allCompanies = ref<any[]>([])
 const allQuotes = ref<any[]>([])
 const loading = ref(true)
+const selectedUser = ref<any>(null)
 const selectedCompany = ref<any>(null)
 const selectedQuote = ref<any>(null)
+const showUserModal = ref(false)
 const showCompanyModal = ref(false)
 const showQuoteModal = ref(false)
 const actionLoading = ref(false)
@@ -42,40 +37,43 @@ onMounted(async () => {
 async function loadDashboardData() {
   loading.value = true
   try {
-    const [companiesRes, quotesRes, postsRes] = await Promise.all([
-      supabase.from('companies').select('*', { count: 'exact' }),
+    const [usersRes, companiesRes, quotesRes, producersRes] = await Promise.all([
+      supabase.from('profiles').select(`
+        *,
+        auth_user:user_id (email)
+      `),
+      supabase.from('companies').select('*'),
       supabase.from('quote_requests').select(`
         *,
-        company:companies!quote_requests_buyer_company_id_fkey(id, company_name, city, email, phone)
-      `, { count: 'exact' }),
-      supabase.from('blog_posts').select('*', { count: 'exact' })
+        requester:profiles!quote_requests_requester_id_fkey(user_id, first_name, last_name, user_type),
+        target_company:companies!quote_requests_target_company_id_fkey(id, name, city)
+      `),
+      supabase.from('producer_profiles').select('id, company_id').eq('is_active', true)
     ])
 
+    const users = usersRes.data || []
     const companies = companiesRes.data || []
     const quotes = quotesRes.data || []
-    const posts = postsRes.data || []
+    const producers = producersRes.data || []
 
-    stats.value = {
-      totalCompanies: companies.length,
-      verifiedCompanies: companies.filter(c => c.verified).length,
-      pendingCompanies: companies.filter(c => !c.verified).length,
-      totalQuotes: quotes.length,
-      pendingQuotes: quotes.filter(q => q.status === 'pending_approval').length,
-      totalPosts: posts.length,
-      publishedPosts: posts.filter(p => p.published).length
-    }
+    allUsers.value = users.sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
 
     allCompanies.value = companies.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
 
-    recentCompanies.value = allCompanies.value.slice(0, 5)
-
     allQuotes.value = quotes.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
 
-    recentQuotes.value = allQuotes.value.slice(0, 5)
+    stats.value = {
+      totalUsers: users.length,
+      totalCompanies: companies.length,
+      totalQuotes: quotes.length,
+      activeProducers: producers.length
+    }
   } catch (error) {
     console.error('Error loading dashboard data:', error)
   } finally {
@@ -83,33 +81,51 @@ async function loadDashboardData() {
   }
 }
 
-function viewCompanyDetails(company: any) {
-  selectedCompany.value = company
-  showCompanyModal.value = true
+function viewUserDetails(userItem: any) {
+  selectedUser.value = userItem
+  showUserModal.value = true
   message.value = { type: '', text: '' }
 }
 
-async function toggleVerification(company: any) {
+function getUserTypeLabel(userType: string) {
+  const labels: Record<string, string> = {
+    'PARTICULIER': 'Particulier',
+    'PRO': 'Pro',
+    'ADMIN': 'Admin'
+  }
+  return labels[userType] || userType
+}
+
+function getUserTypeBadgeClass(userType: string) {
+  const classes: Record<string, string> = {
+    'PARTICULIER': 'type-particulier',
+    'PRO': 'type-pro',
+    'ADMIN': 'type-admin'
+  }
+  return classes[userType] || 'type-particulier'
+}
+
+async function changeUserType(userItem: any, newType: string) {
   actionLoading.value = true
   message.value = { type: '', text: '' }
 
   try {
     const { error } = await supabase
-      .from('companies')
-      .update({ verified: !company.verified })
-      .eq('id', company.id)
+      .from('profiles')
+      .update({ user_type: newType })
+      .eq('user_id', userItem.user_id)
 
     if (error) throw error
 
     message.value = {
       type: 'success',
-      text: `Entreprise ${!company.verified ? 'vérifiée' : 'non vérifiée'} avec succès`
+      text: `Type d'utilisateur changé en ${getUserTypeLabel(newType)} avec succès`
     }
 
     await loadDashboardData()
 
-    if (selectedCompany.value && selectedCompany.value.id === company.id) {
-      selectedCompany.value.verified = !company.verified
+    if (selectedUser.value && selectedUser.value.user_id === userItem.user_id) {
+      selectedUser.value.user_type = newType
     }
   } catch (error: any) {
     message.value = {
@@ -119,6 +135,12 @@ async function toggleVerification(company: any) {
   } finally {
     actionLoading.value = false
   }
+}
+
+function viewCompanyDetails(company: any) {
+  selectedCompany.value = company
+  showCompanyModal.value = true
+  message.value = { type: '', text: '' }
 }
 
 async function deleteCompany(companyId: string) {
@@ -162,26 +184,31 @@ function formatDate(dateString: string) {
   })
 }
 
-function getStatusColor(status: string) {
-  const colors: Record<string, string> = {
-    draft: '#9ca3af',
-    pending_approval: '#f59e0b',
-    approved: '#10b981',
-    rejected: '#ef4444',
-    sent: '#6366f1'
-  }
-  return colors[status] || '#6b7280'
+function getRequesterName(requester: any) {
+  if (!requester) return 'Non disponible'
+  const firstName = requester.first_name || ''
+  const lastName = requester.last_name || ''
+  return `${firstName} ${lastName}`.trim() || 'Non renseigné'
 }
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    draft: 'Brouillon',
-    pending_approval: 'En attente d\'approbation',
-    approved: 'Approuvé',
-    rejected: 'Rejeté',
-    sent: 'Envoyé'
+    'SENT': 'Envoyée',
+    'VIEWED': 'Vue',
+    'RESPONDED': 'Répondue',
+    'CLOSED': 'Clôturée'
   }
   return labels[status] || status
+}
+
+function getStatusBadgeClass(status: string) {
+  const classes: Record<string, string> = {
+    'SENT': 'status-sent',
+    'VIEWED': 'status-viewed',
+    'RESPONDED': 'status-responded',
+    'CLOSED': 'status-closed'
+  }
+  return classes[status] || 'status-sent'
 }
 
 function viewQuoteDetails(quote: any) {
@@ -190,38 +217,31 @@ function viewQuoteDetails(quote: any) {
   message.value = { type: '', text: '' }
 }
 
-async function updateQuoteStatus(quote: any, newStatus: string) {
+async function closeQuote(quoteId: string) {
+  if (!confirm('Êtes-vous sûr de vouloir fermer cette demande de devis ?')) {
+    return
+  }
+
   actionLoading.value = true
   message.value = { type: '', text: '' }
 
   try {
-    const updateData: any = { status: newStatus }
-
-    if (newStatus === 'approved') {
-      updateData.approved_by_admin = true
-      updateData.approved_at = new Date().toISOString()
-    } else if (newStatus === 'rejected' || newStatus === 'pending_approval') {
-      updateData.approved_by_admin = false
-      updateData.approved_at = null
-    }
-
     const { error } = await supabase
       .from('quote_requests')
-      .update(updateData)
-      .eq('id', quote.id)
+      .update({ status: 'CLOSED' })
+      .eq('id', quoteId)
 
     if (error) throw error
 
     message.value = {
       type: 'success',
-      text: `Demande ${getStatusLabel(newStatus).toLowerCase()} avec succès`
+      text: 'Demande de devis fermée avec succès'
     }
 
     await loadDashboardData()
 
-    if (selectedQuote.value && selectedQuote.value.id === quote.id) {
-      selectedQuote.value.status = newStatus
-      selectedQuote.value.approved_by_admin = updateData.approved_by_admin
+    if (selectedQuote.value && selectedQuote.value.id === quoteId) {
+      selectedQuote.value.status = 'CLOSED'
     }
   } catch (error: any) {
     message.value = {
@@ -271,8 +291,7 @@ async function deleteQuote(quoteId: string) {
   <AdminLayout v-slot="{ currentPage }">
     <div v-if="currentPage === 'dashboard'" class="admin-dashboard">
       <div class="page-header">
-        <h1 class="page-title">Tableau de bord administrateur</h1>
-        <p class="page-subtitle">Vue d'ensemble de la plateforme LocalLink</p>
+        <h1 class="page-title">Administration de la plateforme</h1>
       </div>
 
       <div v-if="loading" class="loading-container">
@@ -283,13 +302,18 @@ async function deleteQuote(quoteId: string) {
       <div v-else class="dashboard-content">
         <div class="stats-grid">
           <div class="stat-card">
+            <div class="stat-icon users">👥</div>
+            <div class="stat-info">
+              <span class="stat-label">Utilisateurs</span>
+              <span class="stat-value">{{ stats.totalUsers }}</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
             <div class="stat-icon companies">🏢</div>
             <div class="stat-info">
-              <span class="stat-label">Entreprises</span>
+              <span class="stat-label">Sociétés</span>
               <span class="stat-value">{{ stats.totalCompanies }}</span>
-              <span class="stat-detail">
-                {{ stats.verifiedCompanies }} vérifiées • {{ stats.pendingCompanies }} en attente
-              </span>
             </div>
           </div>
 
@@ -298,93 +322,141 @@ async function deleteQuote(quoteId: string) {
             <div class="stat-info">
               <span class="stat-label">Demandes de devis</span>
               <span class="stat-value">{{ stats.totalQuotes }}</span>
-              <span class="stat-detail">
-                {{ stats.pendingQuotes }} en attente de modération
-              </span>
             </div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon blog">📝</div>
+            <div class="stat-icon producers">🎯</div>
             <div class="stat-info">
-              <span class="stat-label">Articles de blog</span>
-              <span class="stat-value">{{ stats.totalPosts }}</span>
-              <span class="stat-detail">
-                {{ stats.publishedPosts }} publiés
-              </span>
+              <span class="stat-label">Producteurs actifs</span>
+              <span class="stat-value">{{ stats.activeProducers }}</span>
             </div>
           </div>
         </div>
+      </div>
+    </div>
 
-        <div class="dashboard-sections">
-          <section class="dashboard-section">
-            <div class="section-header">
-              <h2 class="section-title">Entreprises récentes</h2>
-            </div>
-            <div class="data-table">
-              <div v-if="recentCompanies.length === 0" class="empty-state">
-                Aucune entreprise pour le moment
-              </div>
-              <div v-else class="table-rows">
-                <div v-for="company in recentCompanies" :key="company.id" class="table-row">
-                  <div class="row-main">
-                    <div class="company-info">
-                      <span class="company-name">{{ company.company_name }}</span>
-                      <span class="company-category">{{ company.category }}</span>
-                    </div>
-                    <div class="row-meta">
-                      <span class="company-location">{{ company.city }}</span>
-                      <span
-                        class="verification-badge"
-                        :class="company.verified ? 'verified' : 'pending'"
-                      >
-                        {{ company.verified ? 'Vérifiée' : 'En attente' }}
-                      </span>
-                      <span class="company-date">{{ formatDate(company.created_at) }}</span>
-                    </div>
-                  </div>
+    <div v-else-if="currentPage === 'users'" class="admin-page">
+      <div class="page-header">
+        <h1 class="page-title">Utilisateurs</h1>
+        <p class="page-subtitle">{{ allUsers.length }} utilisateurs au total</p>
+      </div>
+
+      <div v-if="message.text && !showUserModal" class="message-banner" :class="message.type">
+        {{ message.text }}
+      </div>
+
+      <div class="users-list">
+        <div class="data-table">
+          <div v-if="allUsers.length === 0" class="empty-state">
+            Aucun utilisateur pour le moment
+          </div>
+          <div v-else class="table-rows">
+            <div v-for="userItem in allUsers" :key="userItem.user_id" class="table-row clickable" @click="viewUserDetails(userItem)">
+              <div class="row-main">
+                <div class="user-info">
+                  <span class="user-email">{{ userItem.auth_user?.[0]?.email || 'Email non disponible' }}</span>
+                  <span class="user-name">{{ userItem.first_name }} {{ userItem.last_name }}</span>
+                </div>
+                <div class="row-meta">
+                  <span class="user-type-badge" :class="getUserTypeBadgeClass(userItem.user_type)">
+                    {{ getUserTypeLabel(userItem.user_type) }}
+                  </span>
+                  <span class="user-date">{{ formatDate(userItem.created_at) }}</span>
+                  <button class="btn-action" @click.stop="viewUserDetails(userItem)">
+                    Voir le profil
+                  </button>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </div>
+      </div>
 
-          <section class="dashboard-section">
-            <div class="section-header">
-              <h2 class="section-title">Demandes de devis récentes</h2>
+      <div v-if="showUserModal && selectedUser" class="modal-overlay" @click="showUserModal = false">
+        <div class="modal-content user-modal" @click.stop>
+          <button class="close-btn" @click="showUserModal = false">✕</button>
+
+          <div class="modal-header-content">
+            <h2>{{ selectedUser.auth_user?.[0]?.email || 'Utilisateur' }}</h2>
+            <span class="user-type-badge" :class="getUserTypeBadgeClass(selectedUser.user_type)">
+              {{ getUserTypeLabel(selectedUser.user_type) }}
+            </span>
+          </div>
+
+          <div v-if="message.text" class="message-banner" :class="message.type">
+            {{ message.text }}
+          </div>
+
+          <div class="user-details-grid">
+            <div class="detail-row">
+              <span class="detail-label">Prénom</span>
+              <span class="detail-value">{{ selectedUser.first_name || 'Non renseigné' }}</span>
             </div>
-            <div class="data-table">
-              <div v-if="recentQuotes.length === 0" class="empty-state">
-                Aucune demande pour le moment
-              </div>
-              <div v-else class="table-rows">
-                <div v-for="quote in recentQuotes" :key="quote.id" class="table-row">
-                  <div class="row-main">
-                    <div class="quote-info">
-                      <span class="quote-title">{{ quote.title }}</span>
-                      <span class="quote-description">{{ quote.description.substring(0, 80) }}...</span>
-                    </div>
-                    <div class="row-meta">
-                      <span
-                        class="status-badge"
-                        :style="{ backgroundColor: getStatusColor(quote.status) }"
-                      >
-                        {{ quote.status }}
-                      </span>
-                      <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="detail-row">
+              <span class="detail-label">Nom</span>
+              <span class="detail-value">{{ selectedUser.last_name || 'Non renseigné' }}</span>
             </div>
-          </section>
+            <div class="detail-row">
+              <span class="detail-label">Email</span>
+              <span class="detail-value">{{ selectedUser.auth_user?.[0]?.email || 'Non disponible' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Téléphone</span>
+              <span class="detail-value">{{ selectedUser.phone || 'Non renseigné' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Type d'utilisateur</span>
+              <span class="detail-value">{{ getUserTypeLabel(selectedUser.user_type) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Inscrit le</span>
+              <span class="detail-value">{{ formatDate(selectedUser.created_at) }}</span>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button
+              v-if="selectedUser.user_type === 'PARTICULIER'"
+              class="btn-change-type"
+              :disabled="actionLoading"
+              @click="changeUserType(selectedUser, 'PRO')"
+            >
+              Passer en PRO
+            </button>
+            <button
+              v-if="selectedUser.user_type === 'PRO'"
+              class="btn-change-type"
+              :disabled="actionLoading"
+              @click="changeUserType(selectedUser, 'ADMIN')"
+            >
+              Passer en ADMIN
+            </button>
+            <button
+              v-if="selectedUser.user_type === 'PRO'"
+              class="btn-change-type"
+              :disabled="actionLoading"
+              @click="changeUserType(selectedUser, 'PARTICULIER')"
+            >
+              Passer en PARTICULIER
+            </button>
+            <button
+              v-if="selectedUser.user_type === 'ADMIN'"
+              class="btn-change-type"
+              :disabled="actionLoading"
+              @click="changeUserType(selectedUser, 'PRO')"
+            >
+              Retirer ADMIN
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <div v-else-if="currentPage === 'companies'" class="admin-page">
       <div class="page-header">
-        <h1 class="page-title">Gestion des entreprises</h1>
-        <p class="page-subtitle">{{ allCompanies.length }} entreprises au total</p>
+        <h1 class="page-title">Sociétés référencées</h1>
+        <p class="page-subtitle">{{ allCompanies.length }} sociétés au total</p>
       </div>
 
       <div v-if="message.text && !showCompanyModal" class="message-banner" :class="message.type">
@@ -394,23 +466,25 @@ async function deleteQuote(quoteId: string) {
       <div class="companies-list">
         <div class="data-table">
           <div v-if="allCompanies.length === 0" class="empty-state">
-            Aucune entreprise pour le moment
+            Aucune société pour le moment
           </div>
           <div v-else class="table-rows">
             <div v-for="company in allCompanies" :key="company.id" class="table-row clickable" @click="viewCompanyDetails(company)">
               <div class="row-main">
                 <div class="company-info">
-                  <span class="company-name">{{ company.company_name }}</span>
-                  <span class="company-category">{{ company.category }}</span>
+                  <span class="company-name">{{ company.name }}</span>
+                  <span class="company-siret">SIRET: {{ company.siret }}</span>
                 </div>
                 <div class="row-meta">
                   <span class="company-location">{{ company.city }}</span>
-                  <span class="verification-badge" :class="company.verified ? 'verified' : 'pending'">
-                    {{ company.verified ? 'Vérifiée' : 'En attente' }}
+                  <span class="claim-badge" :class="company.is_claimed ? 'claimed' : 'unclaimed'">
+                    {{ company.is_claimed ? 'Revendiquée' : 'Non revendiquée' }}
                   </span>
-                  <span class="company-date">{{ formatDate(company.created_at) }}</span>
-                  <button class="btn-action" @click.stop="toggleVerification(company)" :disabled="actionLoading">
-                    {{ company.verified ? 'Retirer vérification' : 'Vérifier' }}
+                  <button class="btn-action" @click.stop="viewCompanyDetails(company)">
+                    Voir / Éditer
+                  </button>
+                  <button class="btn-delete-small" @click.stop="deleteCompany(company.id)" :disabled="actionLoading">
+                    Supprimer
                   </button>
                 </div>
               </div>
@@ -424,9 +498,9 @@ async function deleteQuote(quoteId: string) {
           <button class="close-btn" @click="showCompanyModal = false">✕</button>
 
           <div class="modal-header-content">
-            <h2>{{ selectedCompany.company_name }}</h2>
-            <span class="verification-badge" :class="selectedCompany.verified ? 'verified' : 'pending'">
-              {{ selectedCompany.verified ? 'Vérifiée' : 'En attente' }}
+            <h2>{{ selectedCompany.name }}</h2>
+            <span class="claim-badge" :class="selectedCompany.is_claimed ? 'claimed' : 'unclaimed'">
+              {{ selectedCompany.is_claimed ? 'Revendiquée' : 'Non revendiquée' }}
             </span>
           </div>
 
@@ -436,24 +510,28 @@ async function deleteQuote(quoteId: string) {
 
           <div class="company-details-grid">
             <div class="detail-row">
-              <span class="detail-label">Catégorie</span>
-              <span class="detail-value">{{ selectedCompany.category }}</span>
+              <span class="detail-label">SIRET</span>
+              <span class="detail-value">{{ selectedCompany.siret }}</span>
+            </div>
+            <div v-if="selectedCompany.siren" class="detail-row">
+              <span class="detail-label">SIREN</span>
+              <span class="detail-value">{{ selectedCompany.siren }}</span>
+            </div>
+            <div v-if="selectedCompany.naf_code" class="detail-row">
+              <span class="detail-label">Code NAF</span>
+              <span class="detail-value">{{ selectedCompany.naf_code }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Ville</span>
               <span class="detail-value">{{ selectedCompany.city }} ({{ selectedCompany.postal_code }})</span>
             </div>
-            <div class="detail-row">
+            <div class="detail-row full-width">
               <span class="detail-label">Adresse</span>
               <span class="detail-value">{{ selectedCompany.address }}</span>
             </div>
-            <div class="detail-row">
+            <div v-if="selectedCompany.phone" class="detail-row">
               <span class="detail-label">Téléphone</span>
               <span class="detail-value">{{ selectedCompany.phone }}</span>
-            </div>
-            <div v-if="selectedCompany.email" class="detail-row">
-              <span class="detail-label">Email</span>
-              <span class="detail-value">{{ selectedCompany.email }}</span>
             </div>
             <div v-if="selectedCompany.website" class="detail-row">
               <span class="detail-label">Site web</span>
@@ -461,15 +539,17 @@ async function deleteQuote(quoteId: string) {
                 <a :href="selectedCompany.website" target="_blank">{{ selectedCompany.website }}</a>
               </span>
             </div>
-            <div class="detail-row full-width">
+            <div v-if="selectedCompany.description" class="detail-row full-width">
               <span class="detail-label">Description</span>
               <span class="detail-value">{{ selectedCompany.description }}</span>
             </div>
-            <div v-if="selectedCompany.tags && selectedCompany.tags.length > 0" class="detail-row full-width">
-              <span class="detail-label">Tags</span>
-              <div class="tags-list">
-                <span v-for="tag in selectedCompany.tags" :key="tag" class="tag">{{ tag }}</span>
-              </div>
+            <div class="detail-row">
+              <span class="detail-label">Source</span>
+              <span class="detail-value">{{ selectedCompany.source }}</span>
+            </div>
+            <div v-if="selectedCompany.is_claimed && selectedCompany.claimed_at" class="detail-row">
+              <span class="detail-label">Revendiquée le</span>
+              <span class="detail-value">{{ formatDate(selectedCompany.claimed_at) }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Créée le</span>
@@ -478,9 +558,6 @@ async function deleteQuote(quoteId: string) {
           </div>
 
           <div class="modal-actions">
-            <button class="btn-verify" :disabled="actionLoading" @click="toggleVerification(selectedCompany)">
-              {{ selectedCompany.verified ? 'Retirer la vérification' : 'Vérifier l\'entreprise' }}
-            </button>
             <button class="btn-delete" :disabled="actionLoading" @click="deleteCompany(selectedCompany.id)">
               Supprimer
             </button>
@@ -491,7 +568,7 @@ async function deleteQuote(quoteId: string) {
 
     <div v-else-if="currentPage === 'quotes'" class="admin-page">
       <div class="page-header">
-        <h1 class="page-title">Gestion des demandes de devis</h1>
+        <h1 class="page-title">Demandes de devis</h1>
         <p class="page-subtitle">{{ allQuotes.length }} demandes au total</p>
       </div>
 
@@ -509,16 +586,18 @@ async function deleteQuote(quoteId: string) {
               <div class="row-main">
                 <div class="quote-info">
                   <span class="quote-title">{{ quote.title }}</span>
-                  <span class="quote-description">{{ quote.description.substring(0, 80) }}...</span>
-                  <span class="quote-company">Par {{ quote.company?.company_name }} ({{ quote.company?.city }})</span>
+                  <span class="quote-requester">
+                    Demandeur: {{ getRequesterName(quote.requester) }} ({{ getUserTypeLabel(quote.requester?.user_type) }})
+                  </span>
+                  <span class="quote-target">Société ciblée: {{ quote.target_company?.name }} ({{ quote.target_company?.city }})</span>
                 </div>
                 <div class="row-meta">
-                  <span class="status-badge" :style="{ backgroundColor: getStatusColor(quote.status) }">
+                  <span class="status-badge" :class="getStatusBadgeClass(quote.status)">
                     {{ getStatusLabel(quote.status) }}
                   </span>
                   <span class="quote-date">{{ formatDate(quote.created_at) }}</span>
-                  <button class="btn-action" @click.stop="updateQuoteStatus(quote, quote.status === 'pending_approval' ? 'approved' : 'pending_approval')" :disabled="actionLoading">
-                    {{ quote.status === 'pending_approval' ? 'Approuver' : 'Remettre en attente' }}
+                  <button class="btn-action" @click.stop="viewQuoteDetails(quote)">
+                    Consulter
                   </button>
                 </div>
               </div>
@@ -533,7 +612,7 @@ async function deleteQuote(quoteId: string) {
 
           <div class="modal-header-content">
             <h2>{{ selectedQuote.title }}</h2>
-            <span class="status-badge" :style="{ backgroundColor: getStatusColor(selectedQuote.status) }">
+            <span class="status-badge" :class="getStatusBadgeClass(selectedQuote.status)">
               {{ getStatusLabel(selectedQuote.status) }}
             </span>
           </div>
@@ -549,32 +628,38 @@ async function deleteQuote(quoteId: string) {
             </div>
 
             <div class="detail-row">
-              <span class="detail-label">Entreprise demandeuse</span>
-              <span class="detail-value">{{ selectedQuote.company?.company_name }}</span>
+              <span class="detail-label">Demandeur</span>
+              <span class="detail-value">{{ getRequesterName(selectedQuote.requester) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Type de demandeur</span>
+              <span class="detail-value">{{ getUserTypeLabel(selectedQuote.requester?.user_type) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Société ciblée</span>
+              <span class="detail-value">{{ selectedQuote.target_company?.name }}</span>
             </div>
 
             <div class="detail-row">
               <span class="detail-label">Ville</span>
-              <span class="detail-value">{{ selectedQuote.company?.city }}</span>
+              <span class="detail-value">{{ selectedQuote.target_company?.city }}</span>
             </div>
 
-            <div v-if="selectedQuote.company?.email" class="detail-row">
-              <span class="detail-label">Email</span>
-              <span class="detail-value">
-                <a :href="`mailto:${selectedQuote.company.email}`">{{ selectedQuote.company.email }}</a>
-              </span>
+            <div v-if="selectedQuote.volume_estimated" class="detail-row">
+              <span class="detail-label">Volume estimé</span>
+              <span class="detail-value">{{ selectedQuote.volume_estimated }}</span>
             </div>
 
-            <div v-if="selectedQuote.company?.phone" class="detail-row">
-              <span class="detail-label">Téléphone</span>
-              <span class="detail-value">
-                <a :href="`tel:${selectedQuote.company.phone}`">{{ selectedQuote.company.phone }}</a>
-              </span>
+            <div v-if="selectedQuote.frequency" class="detail-row">
+              <span class="detail-label">Fréquence</span>
+              <span class="detail-value">{{ selectedQuote.frequency }}</span>
             </div>
 
-            <div v-if="selectedQuote.deadline" class="detail-row">
-              <span class="detail-label">Date de livraison souhaitée</span>
-              <span class="detail-value">{{ formatDate(selectedQuote.deadline) }}</span>
+            <div v-if="selectedQuote.location" class="detail-row">
+              <span class="detail-label">Localisation</span>
+              <span class="detail-value">{{ selectedQuote.location }}</span>
             </div>
 
             <div class="detail-row">
@@ -585,7 +670,7 @@ async function deleteQuote(quoteId: string) {
             <div class="detail-row">
               <span class="detail-label">Statut actuel</span>
               <span class="detail-value">
-                <span class="status-badge" :style="{ backgroundColor: getStatusColor(selectedQuote.status) }">
+                <span class="status-badge" :class="getStatusBadgeClass(selectedQuote.status)">
                   {{ getStatusLabel(selectedQuote.status) }}
                 </span>
               </span>
@@ -593,40 +678,14 @@ async function deleteQuote(quoteId: string) {
           </div>
 
           <div class="modal-actions-multi">
-            <button class="btn-approve" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'approved')">
-              Approuver
-            </button>
-            <button class="btn-reject" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'rejected')">
-              Rejeter
-            </button>
-            <button class="btn-pending" :disabled="actionLoading" @click="updateQuoteStatus(selectedQuote, 'pending_approval')">
-              Remettre en attente
+            <button class="btn-close-quote" :disabled="actionLoading" @click="closeQuote(selectedQuote.id)">
+              Fermer
             </button>
             <button class="btn-delete" :disabled="actionLoading" @click="deleteQuote(selectedQuote.id)">
-              Supprimer
+              Modérer (Supprimer)
             </button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div v-else-if="currentPage === 'blog'" class="admin-page">
-      <div class="page-header">
-        <h1 class="page-title">Gestion du blog</h1>
-      </div>
-      <div class="coming-soon">
-        <span class="icon">📝</span>
-        <p>Module de gestion du blog en cours de développement</p>
-      </div>
-    </div>
-
-    <div v-else-if="currentPage === 'payments'" class="admin-page">
-      <div class="page-header">
-        <h1 class="page-title">Gestion des paiements</h1>
-      </div>
-      <div class="coming-soon">
-        <span class="icon">💳</span>
-        <p>Module de gestion des paiements en cours de développement</p>
       </div>
     </div>
   </AdminLayout>
@@ -701,6 +760,10 @@ async function deleteQuote(quoteId: string) {
   font-size: 28px;
 }
 
+.stat-icon.users {
+  background: #e0e7ff;
+}
+
 .stat-icon.companies {
   background: #dbeafe;
 }
@@ -709,8 +772,8 @@ async function deleteQuote(quoteId: string) {
   background: #fef3c7;
 }
 
-.stat-icon.blog {
-  background: #ddd6fe;
+.stat-icon.producers {
+  background: #d1fae5;
 }
 
 .stat-info {
@@ -848,6 +911,113 @@ async function deleteQuote(quoteId: string) {
 
 .verification-badge.pending {
   background: #f59e0b;
+}
+
+.claim-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.claim-badge.claimed {
+  background: #10b981;
+}
+
+.claim-badge.unclaimed {
+  background: #9ca3af;
+}
+
+.company-siret {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.btn-delete-small {
+  padding: 6px 12px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-delete-small:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-delete-small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.user-type-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-type-badge.type-particulier {
+  background: #3b82f6;
+}
+
+.user-type-badge.type-pro {
+  background: #10b981;
+}
+
+.user-type-badge.type-admin {
+  background: #ef4444;
+}
+
+.user-email {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.user-name {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.user-date {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.user-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.btn-change-type {
+  flex: 1;
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-change-type:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-change-type:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .coming-soon {
@@ -1089,10 +1259,52 @@ async function deleteQuote(quoteId: string) {
   padding: 32px;
 }
 
-.quote-company {
+.quote-requester,
+.quote-target {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
   margin-top: 2px;
+}
+
+.status-badge.status-sent {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-viewed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-responded {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.status-closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.btn-close-quote {
+  padding: 12px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-close-quote:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.btn-close-quote:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .quote-details-grid {
@@ -1106,69 +1318,6 @@ async function deleteQuote(quoteId: string) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-.btn-approve {
-  padding: 12px 24px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-approve:hover:not(:disabled) {
-  background: #059669;
-}
-
-.btn-approve:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-reject {
-  padding: 12px 24px;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-reject:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.btn-reject:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-pending {
-  padding: 12px 24px;
-  background: #f59e0b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-pending:hover:not(:disabled) {
-  background: #d97706;
-}
-
-.btn-pending:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

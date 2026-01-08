@@ -12,10 +12,9 @@ const loading = ref(true)
 
 const menuItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: '📊' },
-  { id: 'companies', label: 'Entreprises', icon: '🏢' },
-  { id: 'quotes', label: 'Demandes de devis', icon: '📋' },
-  { id: 'blog', label: 'Blog', icon: '📝' },
-  { id: 'payments', label: 'Paiements', icon: '💳' }
+  { id: 'users', label: 'Utilisateurs', icon: '👥' },
+  { id: 'companies', label: 'Sociétés', icon: '🏢' },
+  { id: 'quotes', label: 'Demandes de devis', icon: '📋' }
 ]
 
 onMounted(async () => {
