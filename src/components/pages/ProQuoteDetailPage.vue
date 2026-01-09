@@ -33,8 +33,8 @@ async function loadQuote() {
       .from('quote_requests')
       .select(`
         *,
-        target_company:companies!target_company_id(*),
-        requester:profiles!requester_id(*)
+        target_company:companies!quote_requests_target_company_id_fkey(*),
+        requester:profiles!quote_requests_requester_id_profiles_fkey(*)
       `)
       .eq('id', quoteId)
       .single()

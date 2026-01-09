@@ -49,7 +49,7 @@ async function loadQuotes() {
       .from('quote_requests')
       .select(`
         *,
-        requester:profiles!requester_id(*)
+        requester:profiles!quote_requests_requester_id_profiles_fkey(*)
       `)
       .eq('target_company_id', currentCompany.value.id)
       .order('created_at', { ascending: false })

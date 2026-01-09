@@ -61,8 +61,8 @@ async function loadQuotes() {
       .from('quote_requests')
       .select(`
         *,
-        requester:profiles!requester_id(user_id, first_name, last_name, user_type),
-        target_company:companies!target_company_id(id, name, city)
+        requester:profiles!quote_requests_requester_id_profiles_fkey(user_id, first_name, last_name, user_type),
+        target_company:companies!quote_requests_target_company_id_fkey(id, name, city)
       `)
       .order('created_at', { ascending: false })
 
