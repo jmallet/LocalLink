@@ -12,10 +12,6 @@ const menuItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: '📊', isInternal: true },
   { id: 'users', label: 'Utilisateurs', icon: '👥', isInternal: true },
   { id: 'companies', label: 'Sociétés', icon: '🏢', isInternal: true },
-  { id: 'quotes', label: 'Demandes de devis', icon: '📋', isInternal: true }
-]
-
-const externalMenuItems = [
   { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis' }
 ]
 
@@ -75,29 +71,26 @@ async function handleSignOut() {
       </div>
 
       <nav class="sidebar-nav">
-        <button
-          v-for="item in menuItems"
-          :key="item.id"
-          class="nav-item"
-          :class="{ active: currentPage === item.id }"
-          @click="selectPage(item.id)"
-        >
-          <span class="nav-icon">{{ item.icon }}</span>
-          <span class="nav-label">{{ item.label }}</span>
-        </button>
-
-        <div class="nav-divider"></div>
-
-        <router-link
-          v-for="item in externalMenuItems"
-          :key="item.name"
-          :to="{ name: item.name }"
-          class="nav-item nav-link"
-          active-class="active"
-        >
-          <span class="nav-icon">{{ item.icon }}</span>
-          <span class="nav-label">{{ item.label }}</span>
-        </router-link>
+        <template v-for="item in menuItems" :key="item.id || item.name">
+          <router-link
+            v-if="item.path"
+            :to="{ name: item.name }"
+            class="nav-item nav-link"
+            active-class="active"
+          >
+            <span class="nav-icon">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </router-link>
+          <button
+            v-else
+            class="nav-item"
+            :class="{ active: currentPage === item.id }"
+            @click="selectPage(item.id)"
+          >
+            <span class="nav-icon">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </button>
+        </template>
       </nav>
 
       <div class="sidebar-footer">
