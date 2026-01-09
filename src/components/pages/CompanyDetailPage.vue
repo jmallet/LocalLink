@@ -2,14 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { isAuthenticated, user } from '../../stores/auth'
+import { isAuthenticated, user, profile } from '../../stores/auth'
 import type { Company, ProductService } from '../../types/database'
 
 const route = useRoute()
 const router = useRouter()
 
 const company = ref<Company | null>(null)
-const userCompany = ref<Company | null>(null)
 const products = ref<ProductService[]>([])
 const loading = ref(true)
 const showContactModal = ref(false)
@@ -41,24 +40,23 @@ async function loadCompanyData() {
     company.value = companyData
 
     if (companyData) {
-      const { data: productsData, error: productsError } = await supabase
-        .from('products_services')
-        .select('*')
+      const { data: profileData } = await supabase
+        .from('producer_profiles')
+        .select('id')
         .eq('company_id', companyData.id)
-        .eq('available', true)
-
-      if (productsError) throw productsError
-      products.value = productsData || []
-    }
-
-    if (isAuthenticated.value && user.value) {
-      const { data: userData } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('user_id', user.value.id)
         .maybeSingle()
 
-      userCompany.value = userData
+      if (profileData) {
+        const { data: productsData, error: productsError } = await supabase
+          .from('producer_products')
+          .select('*')
+          .eq('producer_id', profileData.id)
+
+        if (productsError) {
+          console.error('Error loading products:', productsError)
+        }
+        products.value = productsData || []
+      }
     }
   } catch (error) {
     console.error('Error loading company:', error)
@@ -82,10 +80,18 @@ function handleContact() {
 }
 
 async function sendQuoteRequest() {
-  if (!userCompany.value || !company.value) {
+  if (!user.value || !company.value) {
     message.value = {
       type: 'error',
-      text: 'Vous devez avoir un profil entreprise pour envoyer une demande de devis.'
+      text: 'Vous devez être connecté pour envoyer une demande de devis.'
+    }
+    return
+  }
+
+  if (!profile.value?.user_type) {
+    message.value = {
+      type: 'error',
+      text: 'Votre profil n\'est pas correctement configuré.'
     }
     return
   }
@@ -94,32 +100,21 @@ async function sendQuoteRequest() {
   message.value = { type: '', text: '' }
 
   try {
-    const { data: quoteData, error: quoteError } = await supabase
+    const requesterType = profile.value.user_type === 'PARTICULIER' ? 'PARTICULIER' : 'ACHETEUR_PRO'
+
+    const { error: quoteError } = await supabase
       .from('quote_requests')
       .insert({
-        buyer_company_id: userCompany.value.id,
+        requester_id: user.value.id,
+        requester_type: requesterType,
+        target_company_id: company.value.id,
         title: quoteFormData.value.title,
         description: quoteFormData.value.description,
-        category: company.value.category,
-        quantity: '1',
-        deadline: quoteFormData.value.delivery_date || null,
-        status: 'pending_approval',
-        approved_by_admin: false
+        budget_range: '',
+        status: 'SENT'
       })
-      .select()
-      .single()
 
     if (quoteError) throw quoteError
-
-    const { error: recipientError } = await supabase
-      .from('quote_recipients')
-      .insert({
-        quote_request_id: quoteData.id,
-        producer_company_id: company.value.id,
-        unlocked: false
-      })
-
-    if (recipientError) throw recipientError
 
     message.value = {
       type: 'success',
@@ -128,8 +123,14 @@ async function sendQuoteRequest() {
 
     setTimeout(() => {
       showContactModal.value = false
+      quoteFormData.value = {
+        title: '',
+        description: '',
+        delivery_date: ''
+      }
     }, 2000)
   } catch (error: any) {
+    console.error('Error sending quote request:', error)
     message.value = {
       type: 'error',
       text: error.message || 'Une erreur est survenue lors de l\'envoi'
