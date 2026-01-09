@@ -51,12 +51,7 @@ async function loadCompanies() {
   try {
     const { data, error } = await supabase
       .from('companies')
-      .select(`
-        *,
-        producer_profiles!inner(is_active)
-      `)
-      .eq('is_claimed', true)
-      .eq('producer_profiles.is_active', true)
+      .select('*')
       .order('name')
 
     if (error) throw error
