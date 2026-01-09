@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { isAuthenticated, user, signOut, isAdmin as isUserAdmin, loading as authLoading } from '../../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 
 const currentPage = ref('dashboard')
 const loading = ref(true)
@@ -43,6 +44,9 @@ async function checkAdminStatus() {
 }
 
 function selectPage(pageId: string) {
+  if (route.name !== 'admin') {
+    router.push({ name: 'admin' })
+  }
   currentPage.value = pageId
 }
 
