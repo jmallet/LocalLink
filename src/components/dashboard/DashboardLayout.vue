@@ -9,22 +9,14 @@ const router = useRouter()
 const mobileMenuOpen = ref(false)
 
 const menuItems = computed(() => {
-  const items = [
+  return [
     { name: 'pro-dashboard' as const, label: 'Tableau de bord', icon: '📊' },
-  ]
-
-  if (currentCompanyUser.value?.is_producteur) {
-    items.push({ name: 'pro-received-quotes' as const, label: 'Devis reçus', icon: '📥' })
-  }
-
-  items.push(
+    { name: 'pro-received-quotes' as const, label: 'Devis reçus', icon: '📥' },
     { name: 'pro-sent-quotes' as const, label: 'Devis envoyés', icon: '📤' },
     { name: 'pro-company-profile' as const, label: 'Ma fiche entreprise', icon: '🏢' },
     { name: 'dashboard-products' as const, label: 'Produits & Services', icon: '📦' },
     { name: 'pro-settings' as const, label: 'Paramètres', icon: '⚙️' }
-  )
-
-  return items
+  ]
 })
 
 async function handleSignOut() {

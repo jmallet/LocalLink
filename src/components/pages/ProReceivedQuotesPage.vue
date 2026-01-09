@@ -35,10 +35,16 @@ onMounted(async () => {
 })
 
 async function loadQuotes() {
-  if (!currentCompany.value) return
+  if (!currentCompany.value) {
+    console.error('No current company set')
+    loading.value = false
+    return
+  }
 
   loading.value = true
   try {
+    console.log('Loading quotes for company:', currentCompany.value.id, currentCompany.value.name)
+
     const { data, error } = await supabase
       .from('quote_requests')
       .select(`
@@ -48,8 +54,12 @@ async function loadQuotes() {
       .eq('target_company_id', currentCompany.value.id)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error loading quotes:', error)
+      throw error
+    }
 
+    console.log('Loaded quotes:', data)
     quotes.value = data || []
   } catch (error) {
     console.error('Error loading quotes:', error)
