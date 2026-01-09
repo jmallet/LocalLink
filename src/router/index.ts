@@ -15,6 +15,7 @@ import ProductsPage from '../components/pages/ProductsPage.vue'
 import QuotesPage from '../components/pages/QuotesPage.vue'
 import VisibilityPage from '../components/pages/VisibilityPage.vue'
 import AdminPage from '../components/pages/AdminPage.vue'
+import AdminQuoteRequestsPage from '../components/pages/AdminQuoteRequestsPage.vue'
 import IndividualProfilePage from '../components/pages/IndividualProfilePage.vue'
 import IndividualQuotesListPage from '../components/pages/IndividualQuotesListPage.vue'
 import IndividualNewQuotePage from '../components/pages/IndividualNewQuotePage.vue'
@@ -153,6 +154,16 @@ const router = createRouter({
       component: AdminPage,
       meta: {
         title: 'Administration - LocalLink',
+        requiresAuth: true,
+        requiresAdmin: true
+      }
+    },
+    {
+      path: '/admin/demandes-devis',
+      name: 'admin-quote-requests',
+      component: AdminQuoteRequestsPage,
+      meta: {
+        title: 'Gestion des demandes de devis - LocalLink',
         requiresAuth: true,
         requiresAdmin: true
       }

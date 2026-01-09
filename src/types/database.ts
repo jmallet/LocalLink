@@ -80,6 +80,10 @@ export interface QuoteRequest {
   location?: string
   budget_range?: string
   status: QuoteStatus
+  admin_approved: boolean
+  admin_approved_at?: string
+  admin_approved_by?: string
+  admin_rejection_reason?: string
   created_at: string
   updated_at: string
 }

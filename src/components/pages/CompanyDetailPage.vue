@@ -111,14 +111,14 @@ async function sendQuoteRequest() {
         title: quoteFormData.value.title,
         description: quoteFormData.value.description,
         budget_range: '',
-        status: 'SENT'
+        admin_approved: false
       })
 
     if (quoteError) throw quoteError
 
     message.value = {
       type: 'success',
-      text: 'Votre demande de devis a été envoyée avec succès !'
+      text: 'Votre demande de devis a été envoyée et est en attente de validation par notre équipe.'
     }
 
     setTimeout(() => {

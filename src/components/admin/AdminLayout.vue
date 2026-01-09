@@ -9,10 +9,14 @@ const currentPage = ref('dashboard')
 const loading = ref(true)
 
 const menuItems = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: '📊' },
-  { id: 'users', label: 'Utilisateurs', icon: '👥' },
-  { id: 'companies', label: 'Sociétés', icon: '🏢' },
-  { id: 'quotes', label: 'Demandes de devis', icon: '📋' }
+  { id: 'dashboard', label: 'Tableau de bord', icon: '📊', isInternal: true },
+  { id: 'users', label: 'Utilisateurs', icon: '👥', isInternal: true },
+  { id: 'companies', label: 'Sociétés', icon: '🏢', isInternal: true },
+  { id: 'quotes', label: 'Demandes de devis', icon: '📋', isInternal: true }
+]
+
+const externalMenuItems = [
+  { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis' }
 ]
 
 onMounted(async () => {
@@ -81,6 +85,19 @@ async function handleSignOut() {
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
         </button>
+
+        <div class="nav-divider"></div>
+
+        <router-link
+          v-for="item in externalMenuItems"
+          :key="item.name"
+          :to="{ name: item.name }"
+          class="nav-item nav-link"
+          active-class="active"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
@@ -229,6 +246,17 @@ async function handleSignOut() {
 
 .nav-item.active .nav-label {
   color: #1e40af;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 12px 0;
 }
 
 .sidebar-footer {
