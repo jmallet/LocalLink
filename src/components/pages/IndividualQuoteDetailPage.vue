@@ -19,13 +19,11 @@ interface QuoteRequest {
 
 interface Company {
   id: string
-  company_name: string
+  name: string
   description: string | null
-  category: string | null
-  city: string
-  postal_code: string
-  phone: string
-  email: string
+  city: string | null
+  postal_code: string | null
+  phone: string | null
   website: string | null
   logo_url: string | null
 }
@@ -98,7 +96,7 @@ async function loadQuoteDetail() {
       .from('quote_recipients')
       .select(`
         *,
-        company:companies(*)
+        company:companies!producer_company_id(*)
       `)
       .eq('quote_request_id', quoteId)
 
@@ -210,16 +208,16 @@ function goBack() {
                   <img
                     v-if="recipient.company?.logo_url"
                     :src="recipient.company.logo_url"
-                    :alt="recipient.company.company_name"
+                    :alt="recipient.company.name"
                   />
                   <span v-else class="logo-placeholder">
-                    {{ recipient.company?.company_name?.[0] || '?' }}
+                    {{ recipient.company?.name?.[0] || '?' }}
                   </span>
                 </div>
                 <div class="company-info">
-                  <h4>{{ recipient.company?.company_name || 'Entreprise' }}</h4>
-                  <p class="company-location">
-                    {{ recipient.company?.city }} ({{ recipient.company?.postal_code }})
+                  <h4>{{ recipient.company?.name || 'Entreprise' }}</h4>
+                  <p v-if="recipient.company?.city || recipient.company?.postal_code" class="company-location">
+                    {{ recipient.company?.city }}{{ recipient.company?.city && recipient.company?.postal_code ? ' (' : '' }}{{ recipient.company?.postal_code }}{{ recipient.company?.city && recipient.company?.postal_code ? ')' : '' }}
                   </p>
                 </div>
               </div>
@@ -229,13 +227,9 @@ function goBack() {
               </p>
 
               <div class="company-contact">
-                <div class="contact-item">
-                  <span class="contact-label">📧 Email:</span>
-                  <a :href="`mailto:${recipient.company?.email}`">{{ recipient.company?.email }}</a>
-                </div>
-                <div class="contact-item">
+                <div v-if="recipient.company?.phone" class="contact-item">
                   <span class="contact-label">📞 Téléphone:</span>
-                  <a :href="`tel:${recipient.company?.phone}`">{{ recipient.company?.phone }}</a>
+                  <a :href="`tel:${recipient.company.phone}`">{{ recipient.company.phone }}</a>
                 </div>
                 <div v-if="recipient.company?.website" class="contact-item">
                   <span class="contact-label">🌐 Site web:</span>
