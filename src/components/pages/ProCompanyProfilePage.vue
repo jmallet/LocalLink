@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { companies, currentCompany, setCurrentCompany, loadCompanies } from '../../stores/auth'
 import DashboardLayout from '../dashboard/DashboardLayout.vue'
 import type { ProducerProfile } from '../../types/database'
+
+const router = useRouter()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -125,14 +128,36 @@ function handleCompanyChange(event: Event) {
   const target = event.target as HTMLSelectElement
   setCurrentCompany(target.value)
 }
+
+function viewPublicPage() {
+  if (currentCompany.value) {
+    router.push({ name: 'company-detail', params: { id: currentCompany.value.id } })
+  }
+}
 </script>
 
 <template>
   <DashboardLayout>
     <div class="pro-company-profile">
       <div class="page-header">
-        <h1>Ma fiche entreprise</h1>
-        <p class="subtitle">Gérez les informations de votre entreprise</p>
+        <div class="header-content">
+          <div class="header-text">
+            <h1>Ma fiche entreprise</h1>
+            <p class="subtitle">Gérez les informations de votre entreprise</p>
+          </div>
+          <button
+            v-if="currentCompany"
+            @click="viewPublicPage"
+            class="btn-view-public"
+            title="Voir ma page publique"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>Voir ma page</span>
+          </button>
+        </div>
       </div>
 
       <div v-if="loading" class="loading">
@@ -320,6 +345,17 @@ function handleCompanyChange(event: Event) {
   margin-bottom: 2rem;
 }
 
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.header-text {
+  flex: 1;
+}
+
 .page-header h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -330,6 +366,33 @@ function handleCompanyChange(event: Event) {
 .subtitle {
   color: #666;
   margin: 0;
+}
+
+.btn-view-public {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: white;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-view-public:hover {
+  background: #2563eb;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-view-public svg {
+  flex-shrink: 0;
 }
 
 .loading {
@@ -516,8 +579,18 @@ function handleCompanyChange(event: Event) {
     padding: 1rem;
   }
 
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .page-header h1 {
     font-size: 1.5rem;
+  }
+
+  .btn-view-public {
+    width: 100%;
+    justify-content: center;
   }
 
   .form-row {
