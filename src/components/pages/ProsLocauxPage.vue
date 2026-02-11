@@ -14,8 +14,32 @@ const searchQuery = ref('')
 const selectedCategory = ref('all')
 const selectedCity = ref('all')
 
+const availableCategories = computed(() => {
+  const categories = new Set<string>()
+  companies.value.forEach(c => {
+    if (c.naf_code) {
+      categories.add(c.naf_code)
+    }
+  })
+  return Array.from(categories).sort()
+})
+
+const availableCities = computed(() => {
+  const cities = new Set<string>()
+  companies.value.forEach(c => {
+    if (c.city) {
+      cities.add(c.city)
+    }
+  })
+  return Array.from(cities).sort()
+})
+
 const filteredCompanies = computed(() => {
   let result = companies.value
+
+  if (selectedCategory.value !== 'all') {
+    result = result.filter(c => c.naf_code === selectedCategory.value)
+  }
 
   if (selectedCity.value !== 'all') {
     result = result.filter(c => c.city === selectedCity.value)
@@ -84,6 +108,8 @@ function handleContact(company: Company) {
     </section>
 
     <SearchFilters
+      :categories="availableCategories"
+      :cities="availableCities"
       @update:search="searchQuery = $event"
       @update:category="selectedCategory = $event"
       @update:city="selectedCity = $event"

@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+
+interface Props {
+  categories?: string[]
+  cities?: string[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  categories: () => [],
+  cities: () => []
+})
 
 const emit = defineEmits<{
   (e: 'update:search', value: string): void
@@ -11,19 +21,19 @@ const searchQuery = ref('')
 const selectedCategory = ref('all')
 const selectedCity = ref('all')
 
-const categories = [
-  { value: 'all', label: 'Toutes catégories' },
-  { value: 'Agriculture & Alimentation', label: 'Agriculture & Alimentation' },
-  { value: 'Construction & Rénovation', label: 'Construction & Rénovation' },
-  { value: 'Services aux entreprises', label: 'Services aux entreprises' },
-  { value: 'Transport & Logistique', label: 'Transport & Logistique' },
-]
+const categoryOptions = computed(() => {
+  return [
+    { value: 'all', label: 'Toutes catégories' },
+    ...props.categories.map(cat => ({ value: cat, label: cat }))
+  ]
+})
 
-const cities = [
-  { value: 'all', label: 'Toutes villes' },
-  { value: 'Lyon', label: 'Lyon' },
-  { value: 'Annecy', label: 'Annecy' },
-]
+const cityOptions = computed(() => {
+  return [
+    { value: 'all', label: 'Toutes villes' },
+    ...props.cities.map(city => ({ value: city, label: city }))
+  ]
+})
 
 function handleSearch() {
   emit('update:search', searchQuery.value)
@@ -58,7 +68,7 @@ function handleCityChange() {
           class="filter-select"
           @change="handleCategoryChange"
         >
-          <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+          <option v-for="cat in categoryOptions" :key="cat.value" :value="cat.value">
             {{ cat.label }}
           </option>
         </select>
@@ -70,7 +80,7 @@ function handleCityChange() {
           class="filter-select"
           @change="handleCityChange"
         >
-          <option v-for="city in cities" :key="city.value" :value="city.value">
+          <option v-for="city in cityOptions" :key="city.value" :value="city.value">
             {{ city.label }}
           </option>
         </select>
