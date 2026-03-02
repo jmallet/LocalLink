@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { user } from '../../stores/auth'
@@ -9,7 +9,9 @@ interface QuoteRequest {
   id: string
   title: string
   description: string
-  category: string
+  location: string | null
+  urgency: string | null
+  category: string | null
   quantity: string | null
   deadline: string | null
   budget_range: string | null
@@ -28,11 +30,26 @@ interface Company {
   logo_url: string | null
 }
 
-interface QuoteRecipient {
+interface QuoteProposal {
   id: string
   producer_company_id: string
-  unlocked: boolean
-  unlocked_at: string | null
+  proposal_type: 'FIXED_PRICE' | 'PRICE_RANGE'
+  proposed_amount: number | null
+  price_min: number | null
+  price_max: number | null
+  proposal_message: string | null
+  delivery_time: string | null
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  created_at: string
+  company?: Company
+}
+
+interface QuoteClarification {
+  id: string
+  producer_company_id: string
+  question: string
+  answer: string | null
+  answered_at: string | null
   created_at: string
   company?: Company
 }
@@ -41,25 +58,40 @@ const route = useRoute()
 const router = useRouter()
 
 const quoteRequest = ref<QuoteRequest | null>(null)
-const recipients = ref<QuoteRecipient[]>([])
+const proposals = ref<QuoteProposal[]>([])
+const clarifications = ref<QuoteClarification[]>([])
 const loading = ref(true)
 const error = ref('')
 
 const statusLabels: Record<string, string> = {
-  'draft': 'Brouillon',
-  'pending_approval': 'En attente d\'approbation',
-  'approved': 'Approuvée',
-  'rejected': 'Refusée',
-  'sent': 'Envoyée aux professionnels'
+  'SENT': 'Envoyée',
+  'VIEWED': 'Vue',
+  'RESPONDED': 'Réponses reçues',
+  'WAITING_FOR_INFO': 'En attente d\'infos',
+  'CLOSED': 'Fermée'
 }
 
 const statusColors: Record<string, string> = {
-  'draft': '#9ca3af',
-  'pending_approval': '#f59e0b',
-  'approved': '#10b981',
-  'rejected': '#ef4444',
-  'sent': '#3b82f6'
+  'SENT': '#3b82f6',
+  'VIEWED': '#f59e0b',
+  'RESPONDED': '#10b981',
+  'WAITING_FOR_INFO': '#f59e0b',
+  'CLOSED': '#9ca3af'
 }
+
+const urgencyLabels: Record<string, string> = {
+  'URGENT_48H': '🔥 Urgent (48h)',
+  'THIS_WEEK': '⚡ Cette semaine',
+  'FLEXIBLE': '📅 Flexible'
+}
+
+const pendingClarifications = computed(() => {
+  return clarifications.value.filter(c => !c.answer)
+})
+
+const answeredClarifications = computed(() => {
+  return clarifications.value.filter(c => c.answer)
+})
 
 onMounted(async () => {
   await loadQuoteDetail()
@@ -92,22 +124,105 @@ async function loadQuoteDetail() {
 
     quoteRequest.value = quoteData
 
-    const { data: recipientsData, error: recipientsError } = await supabase
-      .from('quote_recipients')
+    const { data: proposalsData, error: proposalsError } = await supabase
+      .from('quote_proposals')
       .select(`
         *,
         company:companies!producer_company_id(*)
       `)
       .eq('quote_request_id', quoteId)
+      .order('created_at', { ascending: false })
 
-    if (recipientsError) throw recipientsError
+    if (proposalsError) throw proposalsError
+    proposals.value = proposalsData || []
 
-    recipients.value = recipientsData || []
+    const { data: clarificationsData, error: clarificationsError } = await supabase
+      .from('quote_clarifications')
+      .select(`
+        *,
+        company:companies!producer_company_id(*)
+      `)
+      .eq('quote_request_id', quoteId)
+      .order('created_at', { ascending: false })
+
+    if (clarificationsError) throw clarificationsError
+    clarifications.value = clarificationsData || []
   } catch (err) {
     console.error('Error loading quote detail:', err)
     error.value = 'Erreur lors du chargement des détails'
   } finally {
     loading.value = false
+  }
+}
+
+async function answerClarification(clarificationId: string, answer: string) {
+  if (!answer.trim()) {
+    alert('Veuillez saisir une réponse')
+    return
+  }
+
+  try {
+    const { error } = await supabase
+      .from('quote_clarifications')
+      .update({
+        answer: answer.trim(),
+        answered_at: new Date().toISOString()
+      })
+      .eq('id', clarificationId)
+
+    if (error) throw error
+
+    await loadQuoteDetail()
+  } catch (err) {
+    console.error('Error answering clarification:', err)
+    alert('Erreur lors de l\'envoi de la réponse')
+  }
+}
+
+async function acceptProposal(proposalId: string) {
+  if (!confirm('Êtes-vous sûr de vouloir accepter cette proposition ?')) {
+    return
+  }
+
+  try {
+    const { error } = await supabase
+      .from('quote_proposals')
+      .update({
+        status: 'ACCEPTED',
+        accepted_at: new Date().toISOString()
+      })
+      .eq('id', proposalId)
+
+    if (error) throw error
+
+    await loadQuoteDetail()
+    alert('Proposition acceptée !')
+  } catch (err) {
+    console.error('Error accepting proposal:', err)
+    alert('Erreur lors de l\'acceptation de la proposition')
+  }
+}
+
+async function rejectProposal(proposalId: string) {
+  const reason = prompt('Pourquoi refusez-vous cette proposition ? (optionnel)')
+
+  try {
+    const { error } = await supabase
+      .from('quote_proposals')
+      .update({
+        status: 'REJECTED',
+        rejected_at: new Date().toISOString(),
+        rejection_reason: reason?.trim() || null
+      })
+      .eq('id', proposalId)
+
+    if (error) throw error
+
+    await loadQuoteDetail()
+    alert('Proposition refusée')
+  } catch (err) {
+    console.error('Error rejecting proposal:', err)
+    alert('Erreur lors du refus de la proposition')
   }
 }
 
@@ -118,6 +233,23 @@ function formatDate(dateString: string) {
     month: 'long',
     year: 'numeric'
   }).format(date)
+}
+
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
+function formatPrice(amount: number) {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(amount)
 }
 
 function goBack() {
@@ -157,28 +289,18 @@ function goBack() {
 
           <div class="quote-details">
             <div class="detail-row">
-              <span class="label">Catégorie:</span>
-              <span class="value">{{ quoteRequest.category }}</span>
-            </div>
-
-            <div class="detail-row">
               <span class="label">Date de création:</span>
               <span class="value">{{ formatDate(quoteRequest.created_at) }}</span>
             </div>
 
-            <div v-if="quoteRequest.deadline" class="detail-row">
-              <span class="label">Date limite:</span>
-              <span class="value">{{ formatDate(quoteRequest.deadline) }}</span>
+            <div v-if="quoteRequest.location" class="detail-row">
+              <span class="label">Localisation:</span>
+              <span class="value">{{ quoteRequest.location }}</span>
             </div>
 
-            <div v-if="quoteRequest.quantity" class="detail-row">
-              <span class="label">Quantité / Volume:</span>
-              <span class="value">{{ quoteRequest.quantity }}</span>
-            </div>
-
-            <div v-if="quoteRequest.budget_range" class="detail-row">
-              <span class="label">Budget:</span>
-              <span class="value">{{ quoteRequest.budget_range }}</span>
+            <div v-if="quoteRequest.urgency" class="detail-row">
+              <span class="label">Délai souhaité:</span>
+              <span class="value">{{ urgencyLabels[quoteRequest.urgency] }}</span>
             </div>
           </div>
 
@@ -188,59 +310,172 @@ function goBack() {
           </div>
         </div>
 
-        <div class="responses-section">
-          <h3>Réponses des professionnels ({{ recipients.length }})</h3>
+        <div v-if="pendingClarifications.length > 0" class="clarifications-section">
+          <h3>Demandes de précisions en attente ({{ pendingClarifications.length }})</h3>
 
-          <div v-if="recipients.length === 0" class="empty-responses">
+          <div
+            v-for="clarification in pendingClarifications"
+            :key="clarification.id"
+            class="clarification-card pending"
+          >
+            <div class="company-header">
+              <div class="company-logo">
+                <img
+                  v-if="clarification.company?.logo_url"
+                  :src="clarification.company.logo_url"
+                  :alt="clarification.company.name"
+                />
+                <span v-else class="logo-placeholder">
+                  {{ clarification.company?.name?.[0] || '?' }}
+                </span>
+              </div>
+              <div class="company-info">
+                <h4>{{ clarification.company?.name || 'Entreprise' }}</h4>
+                <p class="clarification-date">{{ formatDateTime(clarification.created_at) }}</p>
+              </div>
+            </div>
+
+            <div class="clarification-question">
+              <span class="question-label">Question:</span>
+              <p>{{ clarification.question }}</p>
+            </div>
+
+            <form @submit.prevent="(e) => {
+              const form = e.target as HTMLFormElement
+              const input = form.querySelector('textarea') as HTMLTextAreaElement
+              answerClarification(clarification.id, input.value)
+              input.value = ''
+            }" class="answer-form">
+              <textarea
+                placeholder="Votre réponse..."
+                rows="3"
+                required
+              ></textarea>
+              <button type="submit" class="btn-answer">Répondre</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="proposals-section">
+          <h3>Propositions de devis ({{ proposals.length }})</h3>
+
+          <div v-if="proposals.length === 0 && pendingClarifications.length === 0" class="empty-responses">
             <span class="empty-icon">📭</span>
-            <p>Aucune réponse pour le moment</p>
+            <p>Aucune proposition pour le moment</p>
             <small>Les professionnels pourront consulter votre demande et vous envoyer leurs devis.</small>
           </div>
 
-          <div v-else class="responses-list">
+          <div v-else class="proposals-list">
             <div
-              v-for="recipient in recipients"
-              :key="recipient.id"
-              class="response-card"
+              v-for="proposal in proposals"
+              :key="proposal.id"
+              class="proposal-card"
+              :class="proposal.status.toLowerCase()"
             >
               <div class="company-header">
                 <div class="company-logo">
                   <img
-                    v-if="recipient.company?.logo_url"
-                    :src="recipient.company.logo_url"
-                    :alt="recipient.company.name"
+                    v-if="proposal.company?.logo_url"
+                    :src="proposal.company.logo_url"
+                    :alt="proposal.company.name"
                   />
                   <span v-else class="logo-placeholder">
-                    {{ recipient.company?.name?.[0] || '?' }}
+                    {{ proposal.company?.name?.[0] || '?' }}
                   </span>
                 </div>
                 <div class="company-info">
-                  <h4>{{ recipient.company?.name || 'Entreprise' }}</h4>
-                  <p v-if="recipient.company?.city || recipient.company?.postal_code" class="company-location">
-                    {{ recipient.company?.city }}{{ recipient.company?.city && recipient.company?.postal_code ? ' (' : '' }}{{ recipient.company?.postal_code }}{{ recipient.company?.city && recipient.company?.postal_code ? ')' : '' }}
+                  <h4>{{ proposal.company?.name || 'Entreprise' }}</h4>
+                  <p v-if="proposal.company?.city" class="company-location">
+                    {{ proposal.company.city }}
                   </p>
                 </div>
               </div>
 
-              <p v-if="recipient.company?.description" class="company-description">
-                {{ recipient.company.description }}
-              </p>
-
-              <div class="company-contact">
-                <div v-if="recipient.company?.phone" class="contact-item">
-                  <span class="contact-label">📞 Téléphone:</span>
-                  <a :href="`tel:${recipient.company.phone}`">{{ recipient.company.phone }}</a>
+              <div class="proposal-details">
+                <div v-if="proposal.proposal_type === 'FIXED_PRICE'" class="price-info fixed">
+                  <span class="price-label">Prix proposé</span>
+                  <span class="price-value">{{ formatPrice(Number(proposal.proposed_amount)) }}</span>
                 </div>
-                <div v-if="recipient.company?.website" class="contact-item">
-                  <span class="contact-label">🌐 Site web:</span>
-                  <a :href="recipient.company.website" target="_blank">Visiter</a>
+
+                <div v-else class="price-info range">
+                  <span class="price-label">Fourchette de prix</span>
+                  <div class="price-range">
+                    <span class="price-min">{{ formatPrice(Number(proposal.price_min)) }}</span>
+                    <span class="separator">→</span>
+                    <span class="price-max">{{ formatPrice(Number(proposal.price_max)) }}</span>
+                  </div>
+                </div>
+
+                <div v-if="proposal.delivery_time" class="delivery-info">
+                  <span class="info-label">Délai d'intervention:</span>
+                  <span class="info-value">{{ proposal.delivery_time }}</span>
+                </div>
+
+                <div v-if="proposal.proposal_message" class="message-info">
+                  <span class="info-label">Message:</span>
+                  <p class="info-value">{{ proposal.proposal_message }}</p>
                 </div>
               </div>
 
-              <div class="response-footer">
-                <span class="response-date">
-                  Réponse reçue le {{ formatDate(recipient.created_at) }}
+              <div class="proposal-footer">
+                <span class="proposal-date">{{ formatDateTime(proposal.created_at) }}</span>
+
+                <div v-if="proposal.status === 'PENDING'" class="proposal-actions">
+                  <button @click="rejectProposal(proposal.id)" class="btn-reject">
+                    Refuser
+                  </button>
+                  <button @click="acceptProposal(proposal.id)" class="btn-accept">
+                    Accepter
+                  </button>
+                </div>
+
+                <span v-else-if="proposal.status === 'ACCEPTED'" class="status-indicator accepted">
+                  ✓ Acceptée
                 </span>
+
+                <span v-else-if="proposal.status === 'REJECTED'" class="status-indicator rejected">
+                  ✗ Refusée
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="answeredClarifications.length > 0" class="answered-clarifications-section">
+          <h3>Précisions apportées ({{ answeredClarifications.length }})</h3>
+
+          <div
+            v-for="clarification in answeredClarifications"
+            :key="clarification.id"
+            class="clarification-card answered"
+          >
+            <div class="company-header">
+              <div class="company-logo">
+                <img
+                  v-if="clarification.company?.logo_url"
+                  :src="clarification.company.logo_url"
+                  :alt="clarification.company.name"
+                />
+                <span v-else class="logo-placeholder">
+                  {{ clarification.company?.name?.[0] || '?' }}
+                </span>
+              </div>
+              <div class="company-info">
+                <h4>{{ clarification.company?.name || 'Entreprise' }}</h4>
+              </div>
+            </div>
+
+            <div class="clarification-exchange">
+              <div class="question-block">
+                <span class="block-label">Question:</span>
+                <p>{{ clarification.question }}</p>
+                <span class="block-date">{{ formatDateTime(clarification.created_at) }}</span>
+              </div>
+
+              <div class="answer-block">
+                <span class="block-label">Votre réponse:</span>
+                <p>{{ clarification.answer }}</p>
+                <span class="block-date">{{ formatDateTime(clarification.answered_at!) }}</span>
               </div>
             </div>
           </div>
@@ -384,14 +619,18 @@ function goBack() {
   white-space: pre-wrap;
 }
 
-.responses-section {
+.proposals-section,
+.clarifications-section,
+.answered-clarifications-section {
   background: white;
   padding: 32px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.responses-section h3 {
+.proposals-section h3,
+.clarifications-section h3,
+.answered-clarifications-section h3 {
   font-size: 20px;
   font-weight: 700;
   color: #111827;
@@ -420,22 +659,34 @@ function goBack() {
   color: #9ca3af;
 }
 
-.responses-list {
+.proposals-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.response-card {
+.proposal-card,
+.clarification-card {
   padding: 24px;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #e5e7eb;
   border-radius: 12px;
   transition: all 0.2s;
 }
 
-.response-card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+.proposal-card.accepted {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.proposal-card.rejected {
+  border-color: #ef4444;
+  background: #fef2f2;
+  opacity: 0.7;
+}
+
+.clarification-card.pending {
+  border-color: #f59e0b;
+  background: #fffbeb;
 }
 
 .company-header {
@@ -478,67 +729,250 @@ function goBack() {
   margin: 0 0 4px 0;
 }
 
-.company-location {
+.company-location,
+.clarification-date {
   font-size: 14px;
   color: #6b7280;
   margin: 0;
 }
 
-.company-description {
-  font-size: 14px;
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0 0 16px 0;
-}
-
-.company-contact {
+.proposal-details {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: 16px;
+  padding: 20px;
   background: #f9fafb;
   border-radius: 8px;
   margin-bottom: 16px;
 }
 
-.contact-item {
+.price-info {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  font-size: 14px;
 }
 
-.contact-label {
-  font-weight: 500;
+.price-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.price-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.price-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.separator {
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.delivery-info,
+.message-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 13px;
+  font-weight: 600;
   color: #6b7280;
 }
 
-.contact-item a {
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 500;
+.info-value {
+  font-size: 15px;
+  color: #111827;
+  margin: 0;
+  line-height: 1.6;
 }
 
-.contact-item a:hover {
-  text-decoration: underline;
-}
-
-.response-footer {
+.proposal-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12px;
+  padding-top: 16px;
   border-top: 1px solid #e5e7eb;
 }
 
-.response-date {
+.proposal-date {
   font-size: 13px;
+  color: #9ca3af;
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-accept,
+.btn-reject {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-accept {
+  background: #10b981;
+  color: white;
+}
+
+.btn-accept:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-reject {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.btn-reject:hover {
+  background: #e5e7eb;
+}
+
+.status-indicator {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.status-indicator.accepted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-indicator.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.clarification-question {
+  margin-bottom: 16px;
+}
+
+.question-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clarification-question p {
+  font-size: 15px;
+  color: #111827;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.answer-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.answer-form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.btn-answer {
+  align-self: flex-end;
+  padding: 10px 20px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-answer:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.clarification-exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.question-block,
+.answer-block {
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.question-block {
+  background: #f9fafb;
+}
+
+.answer-block {
+  background: #eff6ff;
+}
+
+.block-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.question-block p,
+.answer-block p {
+  margin: 0 0 8px 0;
+  color: #111827;
+  line-height: 1.6;
+}
+
+.block-date {
+  font-size: 12px;
   color: #9ca3af;
 }
 
 @media (max-width: 768px) {
   .quote-info-card,
-  .responses-section {
+  .proposals-section,
+  .clarifications-section,
+  .answered-clarifications-section {
     padding: 24px;
   }
 
@@ -549,6 +983,21 @@ function goBack() {
   .company-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .proposal-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .proposal-actions {
+    width: 100%;
+  }
+
+  .btn-accept,
+  .btn-reject {
+    flex: 1;
   }
 }
 </style>
