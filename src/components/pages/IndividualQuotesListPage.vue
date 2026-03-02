@@ -15,7 +15,6 @@ interface QuoteRequest {
   budget_range: string | null
   status: string
   created_at: string
-  quote_count?: number
 }
 
 const router = useRouter()
@@ -67,23 +66,7 @@ async function loadQuotes() {
 
     if (fetchError) throw fetchError
 
-    if (data) {
-      const quotesWithCounts = await Promise.all(
-        data.map(async (quote) => {
-          const { count } = await supabase
-            .from('quote_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('quote_request_id', quote.id)
-
-          return {
-            ...quote,
-            quote_count: count || 0
-          }
-        })
-      )
-
-      quotes.value = quotesWithCounts
-    }
+    quotes.value = data || []
   } catch (err) {
     console.error('Error loading quotes:', err)
     error.value = 'Erreur lors du chargement des demandes'
@@ -166,9 +149,6 @@ function formatDate(dateString: string) {
           </div>
 
           <div class="quote-footer">
-            <span class="quote-count">
-              {{ quote.quote_count || 0 }} réponse{{ (quote.quote_count || 0) > 1 ? 's' : '' }}
-            </span>
             <span class="view-link">Voir les détails →</span>
           </div>
         </div>
@@ -352,14 +332,8 @@ function formatDate(dateString: string) {
 
 .quote-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-}
-
-.quote-count {
-  font-size: 14px;
-  font-weight: 600;
-  color: #2563eb;
 }
 
 .view-link {

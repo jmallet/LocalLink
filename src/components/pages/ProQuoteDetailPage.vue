@@ -4,12 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
 import { user, currentCompany } from '../../stores/auth'
 import DashboardLayout from '../dashboard/DashboardLayout.vue'
-import type { QuoteRequest, QuoteMessage, Company, Profile } from '../../types/database'
+import type { QuoteRequest, Company, Profile } from '../../types/database'
 
 interface QuoteWithDetails extends QuoteRequest {
   target_company?: Company
   requester?: Profile
-  quote_messages?: QuoteMessage[]
 }
 
 interface QuoteProposal {
@@ -45,9 +44,6 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const quote = ref<QuoteWithDetails | null>(null)
-const messages = ref<QuoteMessage[]>([])
-const newMessage = ref('')
-const sending = ref(false)
 
 const proposal = ref<QuoteProposal | null>(null)
 const clarifications = ref<QuoteClarification[]>([])
@@ -108,14 +104,6 @@ async function loadQuote() {
       }
     }
 
-    const { data: messagesData } = await supabase
-      .from('quote_messages')
-      .select('*')
-      .eq('quote_request_id', quoteId)
-      .order('created_at', { ascending: true })
-
-    messages.value = messagesData || []
-
     const { data: proposalData } = await supabase
       .from('quote_proposals')
       .select('*')
@@ -138,43 +126,6 @@ async function loadQuote() {
     router.push({ name: 'pro-dashboard' })
   } finally {
     loading.value = false
-  }
-}
-
-async function sendMessage() {
-  if (!quote.value || !user.value || !newMessage.value.trim()) return
-
-  sending.value = true
-  try {
-    const { data, error } = await supabase
-      .from('quote_messages')
-      .insert({
-        quote_request_id: quote.value.id,
-        sender_user_id: user.value.id,
-        message: newMessage.value.trim(),
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    messages.value.push(data)
-    newMessage.value = ''
-
-    if (quote.value.status !== 'RESPONDED') {
-      await supabase
-        .from('quote_requests')
-        .update({ status: 'RESPONDED' })
-        .eq('id', quote.value.id)
-
-      if (quote.value) {
-        quote.value.status = 'RESPONDED'
-      }
-    }
-  } catch (error) {
-    console.error('Error sending message:', error)
-  } finally {
-    sending.value = false
   }
 }
 
@@ -575,45 +526,6 @@ function getUrgencyLabel(urgency: string | undefined): string {
               <span>⏳ En attente de réponse du client</span>
             </div>
           </div>
-        </div>
-
-        <div class="messages-section">
-          <h2>Messages</h2>
-
-          <div v-if="messages.length === 0" class="no-messages">
-            <p>Aucun message pour le moment</p>
-          </div>
-
-          <div v-else class="messages-list">
-            <div
-              v-for="message in messages"
-              :key="message.id"
-              class="message"
-              :class="{ own: message.sender_user_id === user?.id }"
-            >
-              <div class="message-content">{{ message.message }}</div>
-              <div class="message-time">
-                {{ new Date(message.created_at).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }) }}
-              </div>
-            </div>
-          </div>
-
-          <form v-if="quote.status !== 'CLOSED'" @submit.prevent="sendMessage" class="message-form">
-            <textarea
-              v-model="newMessage"
-              placeholder="Écrivez votre message..."
-              rows="3"
-              :disabled="sending"
-            ></textarea>
-            <button type="submit" class="btn-send" :disabled="sending || !newMessage.trim()">
-              {{ sending ? 'Envoi...' : 'Envoyer' }}
-            </button>
-          </form>
         </div>
       </div>
 
@@ -1195,118 +1107,6 @@ function getUrgencyLabel(urgency: string | undefined): string {
   font-size: 0.875rem;
 }
 
-.messages-section {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 2rem;
-}
-
-.messages-section h2 {
-  margin: 0 0 1.5rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.no-messages {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-}
-
-.messages-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.message {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  max-width: 70%;
-}
-
-.message.own {
-  align-items: flex-end;
-  margin-left: auto;
-}
-
-.message-content {
-  padding: 0.75rem 1rem;
-  background: #f3f4f6;
-  border-radius: 12px;
-  color: #1a1a1a;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.message.own .message-content {
-  background: #2563eb;
-  color: white;
-}
-
-.message-time {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
-  padding: 0 0.5rem;
-}
-
-.message-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.message-form textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
-  transition: border-color 0.2s;
-}
-
-.message-form textarea:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.message-form textarea:disabled {
-  background: #f9fafb;
-  cursor: not-allowed;
-}
-
-.btn-send {
-  align-self: flex-end;
-  padding: 0.75rem 1.5rem;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-send:hover:not(:disabled) {
-  background: #1d4ed8;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.btn-send:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1459,10 +1259,6 @@ function getUrgencyLabel(urgency: string | undefined): string {
 
   .form-row {
     grid-template-columns: 1fr;
-  }
-
-  .message {
-    max-width: 85%;
   }
 }
 </style>

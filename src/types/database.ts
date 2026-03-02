@@ -88,14 +88,6 @@ export interface QuoteRequest {
   updated_at: string
 }
 
-export interface QuoteMessage {
-  id: string
-  quote_request_id: string
-  sender_user_id: string
-  message: string
-  created_at: string
-}
-
 export interface LeadAccess {
   id: string
   quote_request_id: string
@@ -104,11 +96,6 @@ export interface LeadAccess {
 }
 
 export interface QuoteWithCompany extends QuoteRequest {
-  target_company?: Company
-}
-
-export interface QuoteWithMessages extends QuoteRequest {
-  quote_messages?: QuoteMessage[]
   target_company?: Company
 }
 
