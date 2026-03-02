@@ -14,47 +14,20 @@ const message = ref('')
 const formData = ref({
   title: '',
   description: '',
-  category: '',
-  quantity: '',
-  deadline: '',
-  budgetRange: '',
-  radius: '10',
-  city: ''
+  location: '',
+  urgency: 'FLEXIBLE' as 'URGENT_48H' | 'THIS_WEEK' | 'FLEXIBLE'
 })
 
-const categories = [
-  'Alimentation',
-  'Artisanat',
-  'Construction',
-  'Services',
-  'Agriculture',
-  'Commerce',
-  'Industrie',
-  'Autre'
-]
-
-const budgetRanges = [
-  'Moins de 500€',
-  '500€ - 1000€',
-  '1000€ - 5000€',
-  '5000€ - 10000€',
-  'Plus de 10000€',
-  'À définir'
-]
-
-const radiusOptions = [
-  { value: '10', label: '10 km' },
-  { value: '25', label: '25 km' },
-  { value: '50', label: '50 km' },
-  { value: '100', label: '100 km' },
-  { value: 'national', label: 'National' }
+const urgencyOptions = [
+  { value: 'URGENT_48H', label: 'Urgent (48h)', icon: '🔥' },
+  { value: 'THIS_WEEK', label: 'Cette semaine', icon: '⚡' },
+  { value: 'FLEXIBLE', label: 'Flexible', icon: '📅' }
 ]
 
 const isFormValid = computed(() => {
   return formData.value.title.trim() !== '' &&
          formData.value.description.trim() !== '' &&
-         formData.value.category !== '' &&
-         formData.value.city.trim() !== ''
+         formData.value.location.trim() !== ''
 })
 
 async function handleSubmit() {
@@ -88,12 +61,8 @@ function resetForm() {
   formData.value = {
     title: '',
     description: '',
-    category: '',
-    quantity: '',
-    deadline: '',
-    budgetRange: '',
-    radius: '10',
-    city: ''
+    location: '',
+    urgency: 'FLEXIBLE'
   }
   error.value = ''
   message.value = ''
@@ -112,113 +81,68 @@ function resetForm() {
       <div v-if="error" class="message error">{{ error }}</div>
 
       <form @submit.prevent="handleSubmit" class="quote-form">
-        <div class="form-section">
-          <h3>Informations générales</h3>
-
-          <div class="form-group">
-            <label for="title">Titre de votre demande *</label>
-            <input
-              id="title"
-              v-model="formData.title"
-              type="text"
-              required
-              placeholder="Ex: Recherche plombier pour rénovation salle de bain"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="category">Catégorie *</label>
-            <select id="category" v-model="formData.category" required>
-              <option value="">Sélectionnez une catégorie</option>
-              <option v-for="cat in categories" :key="cat" :value="cat">
-                {{ cat }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="description">Description détaillée *</label>
-            <textarea
-              id="description"
-              v-model="formData.description"
-              required
-              rows="6"
-              placeholder="Décrivez précisément votre besoin, les prestations attendues, le contexte..."
-            ></textarea>
-            <span class="helper-text">Plus votre description est détaillée, meilleures seront les réponses</span>
-          </div>
+        <div class="form-group">
+          <label for="title">Titre de la demande *</label>
+          <input
+            id="title"
+            v-model="formData.title"
+            type="text"
+            required
+            placeholder="Ex: Fuite sous évier cuisine"
+            maxlength="100"
+          />
         </div>
 
-        <div class="form-section">
-          <h3>Zone de recherche</h3>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="city">Ville *</label>
-              <input
-                id="city"
-                v-model="formData.city"
-                type="text"
-                required
-                placeholder="Votre ville"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="radius">Rayon de recherche *</label>
-              <select id="radius" v-model="formData.radius" required>
-                <option v-for="option in radiusOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
-            </div>
-          </div>
+        <div class="form-group">
+          <label for="description">Description *</label>
+          <textarea
+            id="description"
+            v-model="formData.description"
+            required
+            rows="6"
+            placeholder="Décrivez votre besoin..."
+          ></textarea>
         </div>
 
-        <div class="form-section">
-          <h3>Détails complémentaires</h3>
+        <div class="form-group">
+          <label for="location">Ville / Code postal *</label>
+          <input
+            id="location"
+            v-model="formData.location"
+            type="text"
+            required
+            placeholder="Ex: Rennes ou 35000"
+          />
+        </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="quantity">Quantité / Volume</label>
+        <div class="form-group">
+          <label>Délai souhaité *</label>
+          <div class="urgency-options">
+            <label
+              v-for="option in urgencyOptions"
+              :key="option.value"
+              class="urgency-option"
+              :class="{ active: formData.urgency === option.value }"
+            >
               <input
-                id="quantity"
-                v-model="formData.quantity"
-                type="text"
-                placeholder="Ex: 20m², 5 pièces, 10 unités..."
+                type="radio"
+                name="urgency"
+                :value="option.value"
+                v-model="formData.urgency"
               />
-            </div>
-
-            <div class="form-group">
-              <label for="deadline">Date limite souhaitée</label>
-              <input
-                id="deadline"
-                v-model="formData.deadline"
-                type="date"
-                :min="new Date().toISOString().split('T')[0]"
-              />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="budgetRange">Budget estimé</label>
-            <select id="budgetRange" v-model="formData.budgetRange">
-              <option value="">Sélectionnez un budget</option>
-              <option v-for="budget in budgetRanges" :key="budget" :value="budget">
-                {{ budget }}
-              </option>
-            </select>
+              <span class="urgency-icon">{{ option.icon }}</span>
+              <span class="urgency-label">{{ option.label }}</span>
+            </label>
           </div>
         </div>
 
         <div class="info-box">
-          <span class="info-icon">ℹ️</span>
+          <span class="info-icon">💡</span>
           <div>
-            <strong>Comment ça marche ?</strong>
+            <strong>Conseil</strong>
             <p>
-              Votre demande sera envoyée aux professionnels correspondant à votre catégorie dans le rayon choisi.
-              Ils pourront consulter votre demande et vous envoyer leurs devis. Vous recevrez une notification
-              pour chaque nouvelle réponse.
+              Plus votre description est précise, plus les professionnels pourront vous proposer
+              des devis adaptés rapidement.
             </p>
           </div>
         </div>
@@ -286,29 +210,51 @@ function resetForm() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.form-section {
-  margin-bottom: 32px;
-  padding-bottom: 32px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.form-section:last-of-type {
-  border-bottom: none;
-  margin-bottom: 24px;
-  padding-bottom: 0;
-}
-
-.form-section h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 20px 0;
-}
-
-.form-row {
+.urgency-options {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.urgency-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.urgency-option:hover {
+  border-color: #2563eb;
+  background: #f0f7ff;
+}
+
+.urgency-option.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.urgency-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.urgency-icon {
+  font-size: 32px;
+}
+
+.urgency-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
 }
 
 .form-group {
@@ -434,7 +380,7 @@ function resetForm() {
     padding: 24px;
   }
 
-  .form-row {
+  .urgency-options {
     grid-template-columns: 1fr;
   }
 
