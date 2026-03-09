@@ -9,10 +9,11 @@ interface QuoteRequest {
   id: string
   title: string
   description: string
-  category: string
-  quantity: string | null
-  deadline: string | null
+  volume_estimated: string | null
+  frequency: string | null
+  location: string | null
   budget_range: string | null
+  urgency: string | null
   status: string
   created_at: string
   proposals_count?: number
@@ -64,10 +65,11 @@ async function loadQuotes() {
         id,
         title,
         description,
-        category,
-        quantity,
-        deadline,
+        volume_estimated,
+        frequency,
+        location,
         budget_range,
+        urgency,
         status,
         created_at,
         quote_proposals(status)
@@ -83,10 +85,11 @@ async function loadQuotes() {
         id: quote.id,
         title: quote.title,
         description: quote.description,
-        category: quote.category,
-        quantity: quote.quantity,
-        deadline: quote.deadline,
+        volume_estimated: quote.volume_estimated,
+        frequency: quote.frequency,
+        location: quote.location,
         budget_range: quote.budget_range,
+        urgency: quote.urgency,
         status: quote.status,
         created_at: quote.created_at,
         proposals_count: proposals.length,
@@ -112,6 +115,15 @@ function formatDate(dateString: string) {
     month: 'long',
     year: 'numeric'
   }).format(date)
+}
+
+function getUrgencyLabel(urgency: string): string {
+  const labels: Record<string, string> = {
+    'URGENT_48H': 'Urgent (48h)',
+    'THIS_WEEK': 'Cette semaine',
+    'FLEXIBLE': 'Flexible'
+  }
+  return labels[urgency] || urgency
 }
 </script>
 
@@ -163,11 +175,14 @@ function formatDate(dateString: string) {
           <p class="quote-description">{{ quote.description }}</p>
 
           <div class="quote-meta">
-            <span class="meta-item">
-              <strong>Catégorie:</strong> {{ quote.category }}
+            <span v-if="quote.location" class="meta-item">
+              <strong>Lieu:</strong> {{ quote.location }}
             </span>
-            <span v-if="quote.deadline" class="meta-item">
-              <strong>Date limite:</strong> {{ formatDate(quote.deadline) }}
+            <span v-if="quote.volume_estimated" class="meta-item">
+              <strong>Volume:</strong> {{ quote.volume_estimated }}
+            </span>
+            <span v-if="quote.urgency" class="meta-item">
+              <strong>Urgence:</strong> {{ getUrgencyLabel(quote.urgency) }}
             </span>
             <span class="meta-item">
               <strong>Créée le:</strong> {{ formatDate(quote.created_at) }}
