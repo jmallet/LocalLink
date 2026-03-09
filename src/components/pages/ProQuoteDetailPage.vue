@@ -151,6 +151,7 @@ function getStatusLabel(status: string): string {
     SENT: 'Nouveau',
     VIEWED: 'Vu',
     RESPONDED: 'Répondu',
+    ACCEPTED: 'Validé',
     WAITING_FOR_INFO: 'En attente d\'infos',
     CLOSED: 'Fermé'
   }
@@ -267,6 +268,15 @@ async function submitResponse() {
         proposal.value = data
       }
 
+      await supabase
+        .from('quote_requests')
+        .update({ status: 'RESPONDED' })
+        .eq('id', quote.value.id)
+
+      if (quote.value) {
+        quote.value.status = 'RESPONDED'
+      }
+
       alert('Votre proposition de prix a été envoyée !')
     } else if (responseType.value === 'PRICE_RANGE') {
       if (!proposalForm.value.priceMin || !proposalForm.value.priceMax) {
@@ -314,6 +324,15 @@ async function submitResponse() {
 
         if (error) throw error
         proposal.value = data
+      }
+
+      await supabase
+        .from('quote_requests')
+        .update({ status: 'RESPONDED' })
+        .eq('id', quote.value.id)
+
+      if (quote.value) {
+        quote.value.status = 'RESPONDED'
       }
 
       alert('Votre fourchette de prix a été envoyée !')
@@ -777,6 +796,11 @@ function unlockContact() {
 }
 
 .status-badge.responded {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-badge.accepted {
   background: #d1fae5;
   color: #065f46;
 }
