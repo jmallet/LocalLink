@@ -15,6 +15,8 @@ interface QuoteRequest {
   budget_range: string | null
   status: string
   created_at: string
+  proposals_count?: number
+  accepted_count?: number
 }
 
 const router = useRouter()
@@ -23,19 +25,17 @@ const loading = ref(true)
 const error = ref('')
 
 const statusLabels: Record<string, string> = {
-  'draft': 'Brouillon',
-  'pending_approval': 'En attente',
-  'approved': 'Approuvée',
-  'rejected': 'Refusée',
-  'sent': 'Envoyée'
+  'SENT': 'Envoyée',
+  'RESPONDED': 'Réponses reçues',
+  'WAITING_FOR_INFO': 'En attente d\'info',
+  'CLOSED': 'Fermée'
 }
 
 const statusColors: Record<string, string> = {
-  'draft': '#9ca3af',
-  'pending_approval': '#f59e0b',
-  'approved': '#10b981',
-  'rejected': '#ef4444',
-  'sent': '#3b82f6'
+  'SENT': '#3b82f6',
+  'RESPONDED': '#10b981',
+  'WAITING_FOR_INFO': '#f59e0b',
+  'CLOSED': '#6b7280'
 }
 
 const sortedQuotes = computed(() => {
@@ -60,13 +60,39 @@ async function loadQuotes() {
 
     const { data, error: fetchError } = await supabase
       .from('quote_requests')
-      .select('*')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        quantity,
+        deadline,
+        budget_range,
+        status,
+        created_at,
+        quote_proposals(status)
+      `)
       .eq('requester_id', user.value.id)
       .order('created_at', { ascending: false })
 
     if (fetchError) throw fetchError
 
-    quotes.value = data || []
+    quotes.value = (data || []).map((quote: any) => {
+      const proposals = quote.quote_proposals || []
+      return {
+        id: quote.id,
+        title: quote.title,
+        description: quote.description,
+        category: quote.category,
+        quantity: quote.quantity,
+        deadline: quote.deadline,
+        budget_range: quote.budget_range,
+        status: quote.status,
+        created_at: quote.created_at,
+        proposals_count: proposals.length,
+        accepted_count: proposals.filter((p: any) => p.status === 'ACCEPTED').length
+      }
+    })
   } catch (err) {
     console.error('Error loading quotes:', err)
     error.value = 'Erreur lors du chargement des demandes'
@@ -149,6 +175,14 @@ function formatDate(dateString: string) {
           </div>
 
           <div class="quote-footer">
+            <div v-if="quote.proposals_count && quote.proposals_count > 0" class="proposals-info">
+              <span class="proposals-badge">
+                {{ quote.proposals_count }} {{ quote.proposals_count === 1 ? 'proposition reçue' : 'propositions reçues' }}
+              </span>
+              <span v-if="quote.accepted_count && quote.accepted_count > 0" class="accepted-badge">
+                {{ quote.accepted_count }} acceptée{{ quote.accepted_count > 1 ? 's' : '' }}
+              </span>
+            </div>
             <span class="view-link">Voir les détails →</span>
           </div>
         </div>
@@ -332,14 +366,40 @@ function formatDate(dateString: string) {
 
 .quote-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  gap: 16px;
+}
+
+.proposals-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.proposals-badge {
+  padding: 4px 12px;
+  background: #eff6ff;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.accepted-badge {
+  padding: 4px 12px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .view-link {
   font-size: 14px;
   font-weight: 600;
   color: #2563eb;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
