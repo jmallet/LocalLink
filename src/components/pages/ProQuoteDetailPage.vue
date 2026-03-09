@@ -63,7 +63,7 @@ const clarificationQuestion = ref('')
 const submittingResponse = ref(false)
 
 const hasActiveProposal = computed(() => {
-  return proposal.value && proposal.value.status === 'PENDING'
+  return proposal.value && (proposal.value.status === 'PENDING' || proposal.value.status === 'ACCEPTED')
 })
 
 const hasClarification = computed(() => {
@@ -346,6 +346,10 @@ function getUrgencyLabel(urgency: string | undefined): string {
   }
   return labels[urgency] || urgency
 }
+
+function unlockContact() {
+  alert('Paiement de 10 €\n\nVous allez être redirigé vers la page de paiement pour débloquer les coordonnées du client.\n\nFonctionnalité en cours de développement.')
+}
 </script>
 
 <template>
@@ -496,6 +500,46 @@ function getUrgencyLabel(urgency: string | undefined): string {
                   <p v-if="proposal.rejection_reason" class="rejection-reason">Raison: {{ proposal.rejection_reason }}</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="proposal && proposal.status === 'ACCEPTED'" class="contact-info-section">
+          <h2>Coordonnées du client</h2>
+
+          <div class="unlock-card">
+            <div class="unlock-header">
+              <span class="unlock-icon">🔓</span>
+              <div>
+                <h3>Proposition acceptée !</h3>
+                <p>Le client souhaite poursuivre avec vous pour établir un devis final.</p>
+              </div>
+            </div>
+
+            <div class="unlock-info">
+              <div class="info-box">
+                <span class="info-icon">ℹ️</span>
+                <div>
+                  <p class="info-title">Pour accéder aux coordonnées du client :</p>
+                  <ul class="info-list">
+                    <li>Coût : <strong>10 €</strong> (paiement unique par lead)</li>
+                    <li>Accès immédiat aux coordonnées complètes</li>
+                    <li>Contactez le client pour finaliser le devis</li>
+                  </ul>
+                </div>
+              </div>
+
+              <button class="btn-unlock" @click="unlockContact">
+                💳 Débloquer les coordonnées (10 €)
+              </button>
+            </div>
+
+            <div class="contact-details">
+              <p class="contact-preview">
+                <strong>Nom :</strong> {{ quote.requester?.first_name || 'Client' }} {{ quote.requester?.last_name?.[0] || '' }}.
+              </p>
+              <p class="contact-locked">📞 Téléphone : <span class="blurred">06 XX XX XX XX</span></p>
+              <p class="contact-locked">✉️ Email : <span class="blurred">xxx@xxxxx.xx</span></p>
             </div>
           </div>
         </div>
@@ -1095,6 +1139,146 @@ function getUrgencyLabel(urgency: string | undefined): string {
 .question-date,
 .answer-date {
   font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.contact-info-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.contact-info-section h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.unlock-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.unlock-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-radius: 8px;
+}
+
+.unlock-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.unlock-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.unlock-header p {
+  margin: 0;
+  color: #047857;
+  font-size: 0.95rem;
+}
+
+.unlock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-box {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #eff6ff;
+  border-radius: 8px;
+  border-left: 4px solid #2563eb;
+}
+
+.info-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.info-title {
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+  color: #1e40af;
+  font-size: 1rem;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #1e40af;
+  font-size: 0.95rem;
+}
+
+.info-list li {
+  margin-bottom: 0.5rem;
+}
+
+.info-list li:last-child {
+  margin-bottom: 0;
+}
+
+.btn-unlock {
+  align-self: center;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-unlock:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.contact-details {
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+}
+
+.contact-preview,
+.contact-locked {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.contact-preview strong,
+.contact-locked strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.contact-locked:last-child {
+  margin-bottom: 0;
+}
+
+.blurred {
+  filter: blur(4px);
+  user-select: none;
   color: #9ca3af;
 }
 
