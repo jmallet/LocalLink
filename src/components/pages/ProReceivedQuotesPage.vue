@@ -26,6 +26,7 @@ const statusCounts = computed(() => {
     new: quotes.value.filter(q => q.status === 'SENT').length,
     viewed: quotes.value.filter(q => q.status === 'VIEWED').length,
     responded: quotes.value.filter(q => q.status === 'RESPONDED').length,
+    accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
     waiting: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
     closed: quotes.value.filter(q => q.status === 'CLOSED').length,
   }
@@ -74,6 +75,7 @@ function getStatusLabel(status: string): string {
     SENT: 'Nouveau',
     VIEWED: 'Vu',
     RESPONDED: 'Répondu',
+    ACCEPTED: 'Validé',
     WAITING_FOR_INFO: 'En attente d\'info',
     CLOSED: 'Fermé'
   }
@@ -105,7 +107,7 @@ function viewQuote(quoteId: string) {
           class="filter-btn"
           :class="{ active: selectedStatus === key }"
         >
-          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'viewed' ? 'Vus' : key === 'responded' ? 'Répondus' : key === 'waiting' ? 'En attente' : 'Fermés' }}
+          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'viewed' ? 'Vus' : key === 'responded' ? 'Répondus' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
           <span class="count">{{ count }}</span>
         </button>
       </div>
@@ -340,6 +342,11 @@ function viewQuote(quoteId: string) {
 }
 
 .status-badge.responded {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-badge.accepted {
   background: #d1fae5;
   color: #065f46;
 }
