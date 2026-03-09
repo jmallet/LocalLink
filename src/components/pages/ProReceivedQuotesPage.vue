@@ -133,9 +133,14 @@ function viewQuote(quoteId: string) {
         >
           <div class="quote-header">
             <h3>{{ quote.title }}</h3>
-            <span class="status-badge" :class="quote.status.toLowerCase()">
-              {{ getStatusLabel(quote.status) }}
-            </span>
+            <div class="status-badges">
+              <span class="status-badge" :class="quote.status.toLowerCase()">
+                {{ getStatusLabel(quote.status) }}
+              </span>
+              <span v-if="quote.status === 'SENT' || quote.status === 'VIEWED'" class="status-badge waiting">
+                En attente
+              </span>
+            </div>
           </div>
 
           <div class="quote-body">
@@ -323,6 +328,13 @@ function viewQuote(quoteId: string) {
   flex: 1;
 }
 
+.status-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -354,6 +366,11 @@ function viewQuote(quoteId: string) {
 .status-badge.waiting_for_info {
   background: #fed7aa;
   color: #9a3412;
+}
+
+.status-badge.waiting {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .status-badge.closed {
