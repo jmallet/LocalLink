@@ -695,8 +695,6 @@ function unlockContact() {
                   placeholder="Pouvez-vous me préciser..."
                 ></textarea>
               </div>
-
-              <p class="info-text">Le statut de la demande passera en "EN ATTENTE D'INFOS" et le client sera notifié.</p>
             </template>
 
             <div class="modal-actions">
