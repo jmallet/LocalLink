@@ -172,6 +172,13 @@ async function answerClarification(clarificationId: string, answer: string) {
 
     if (error) throw error
 
+    if (quoteRequest.value) {
+      await supabase
+        .from('quote_requests')
+        .update({ status: 'WAITING_FOR_INFO' })
+        .eq('id', quoteRequest.value.id)
+    }
+
     await loadQuoteDetail()
   } catch (err) {
     console.error('Error answering clarification:', err)
