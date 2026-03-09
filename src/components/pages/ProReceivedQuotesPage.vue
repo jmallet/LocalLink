@@ -17,14 +17,14 @@ const selectedStatus = ref<string>('all')
 
 const filteredQuotes = computed(() => {
   if (selectedStatus.value === 'all') return quotes.value
+  if (selectedStatus.value === 'new') return quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
   return quotes.value.filter(q => q.status === selectedStatus.value.toUpperCase())
 })
 
 const statusCounts = computed(() => {
   return {
     all: quotes.value.length,
-    new: quotes.value.filter(q => q.status === 'SENT').length,
-    viewed: quotes.value.filter(q => q.status === 'VIEWED').length,
+    new: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
     responded: quotes.value.filter(q => q.status === 'RESPONDED').length,
     accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
     waiting: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
@@ -107,7 +107,7 @@ function viewQuote(quoteId: string) {
           class="filter-btn"
           :class="{ active: selectedStatus === key }"
         >
-          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'viewed' ? 'Vus' : key === 'responded' ? 'Répondus' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
+          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'responded' ? 'Répondus' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
           <span class="count">{{ count }}</span>
         </button>
       </div>
