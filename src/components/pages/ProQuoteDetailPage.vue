@@ -218,11 +218,11 @@ async function submitResponse() {
 
       await supabase
         .from('quote_requests')
-        .update({ status: 'WAITING_FOR_INFO' })
+        .update({ status: 'RESPONDED' })
         .eq('id', quote.value.id)
 
       if (quote.value) {
-        quote.value.status = 'WAITING_FOR_INFO'
+        quote.value.status = 'RESPONDED'
       }
 
       alert('Votre demande de précisions a été envoyée !')
