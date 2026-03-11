@@ -26,20 +26,36 @@ const loading = ref(true)
 const error = ref('')
 const activeFilter = ref<string>('all')
 
-const statusLabels: Record<string, string> = {
-  'SENT': 'En attente',
-  'VIEWED': 'En attente',
-  'RESPONDED': 'Proposition reçue',
-  'ACCEPTED': 'Accepté',
-  'WAITING_FOR_INFO': 'À compléter',
-  'CLOSED': 'Clôturé'
+function getStatusLabel(quote: QuoteRequest): string {
+  if (quote.accepted_count && quote.accepted_count > 0) {
+    return 'Accepté'
+  }
+  if (quote.status === 'WAITING_FOR_INFO') {
+    return 'À compléter'
+  }
+  if (quote.status === 'RESPONDED' || (quote.proposals_count && quote.proposals_count > 0)) {
+    return 'Propositions reçues'
+  }
+  if (quote.status === 'CLOSED') {
+    return 'Clôturé'
+  }
+  return 'En attente'
 }
 
-const statusColors: Record<string, string> = {
-  'SENT': '#3b82f6',
-  'RESPONDED': '#10b981',
-  'WAITING_FOR_INFO': '#f59e0b',
-  'CLOSED': '#6b7280'
+function getStatusColor(quote: QuoteRequest): string {
+  if (quote.accepted_count && quote.accepted_count > 0) {
+    return '#059669'
+  }
+  if (quote.status === 'WAITING_FOR_INFO') {
+    return '#f59e0b'
+  }
+  if (quote.status === 'RESPONDED' || (quote.proposals_count && quote.proposals_count > 0)) {
+    return '#10b981'
+  }
+  if (quote.status === 'CLOSED') {
+    return '#6b7280'
+  }
+  return '#3b82f6'
 }
 
 const filterCounts = computed(() => {
@@ -254,9 +270,9 @@ function getUrgencyLabel(urgency: string): string {
             <h3>{{ quote.title }}</h3>
             <span
               class="status-badge"
-              :style="{ backgroundColor: statusColors[quote.status] }"
+              :style="{ backgroundColor: getStatusColor(quote) }"
             >
-              {{ statusLabels[quote.status] }}
+              {{ getStatusLabel(quote) }}
             </span>
           </div>
 
