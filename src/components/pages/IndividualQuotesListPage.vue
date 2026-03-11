@@ -24,6 +24,7 @@ const router = useRouter()
 const quotes = ref<QuoteRequest[]>([])
 const loading = ref(true)
 const error = ref('')
+const activeFilter = ref<string>('all')
 
 const statusLabels: Record<string, string> = {
   'SENT': 'Envoyée',
@@ -39,8 +40,34 @@ const statusColors: Record<string, string> = {
   'CLOSED': '#6b7280'
 }
 
+const filterCounts = computed(() => {
+  return {
+    all: quotes.value.length,
+    sent: quotes.value.filter(q => q.status === 'SENT').length,
+    responded: quotes.value.filter(q => q.status === 'RESPONDED').length,
+    waiting: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
+    closed: quotes.value.filter(q => q.status === 'CLOSED').length
+  }
+})
+
+const filteredQuotes = computed(() => {
+  let filtered = quotes.value
+
+  if (activeFilter.value === 'sent') {
+    filtered = filtered.filter(q => q.status === 'SENT')
+  } else if (activeFilter.value === 'responded') {
+    filtered = filtered.filter(q => q.status === 'RESPONDED')
+  } else if (activeFilter.value === 'waiting') {
+    filtered = filtered.filter(q => q.status === 'WAITING_FOR_INFO')
+  } else if (activeFilter.value === 'closed') {
+    filtered = filtered.filter(q => q.status === 'CLOSED')
+  }
+
+  return filtered
+})
+
 const sortedQuotes = computed(() => {
-  return [...quotes.value].sort((a, b) => {
+  return [...filteredQuotes.value].sort((a, b) => {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
 })
@@ -155,7 +182,25 @@ function getUrgencyLabel(urgency: string): string {
         </button>
       </div>
 
-      <div v-else class="quotes-list">
+      <div v-else>
+        <div class="filters-container">
+          <button
+            v-for="(count, key) in filterCounts"
+            :key="key"
+            class="filter-btn"
+            :class="{ active: activeFilter === key }"
+            @click="activeFilter = key"
+          >
+            {{ key === 'all' ? 'Toutes' : key === 'sent' ? 'Envoyées' : key === 'responded' ? 'Réponses reçues' : key === 'waiting' ? 'En attente' : 'Fermées' }}
+            <span class="count">{{ count }}</span>
+          </button>
+        </div>
+
+        <div v-if="sortedQuotes.length === 0" class="empty-filter">
+          <p>Aucune demande pour ce filtre</p>
+        </div>
+
+        <div v-else class="quotes-list">
         <div
           v-for="quote in sortedQuotes"
           :key="quote.id"
@@ -200,6 +245,7 @@ function getUrgencyLabel(urgency: string): string {
             </div>
             <span class="view-link">Voir les détails →</span>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -415,6 +461,67 @@ function getUrgencyLabel(urgency: string): string {
   font-weight: 600;
   color: #2563eb;
   flex-shrink: 0;
+}
+
+.filters-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 18px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.filter-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.filter-btn .count {
+  padding: 2px 8px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.filter-btn.active .count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.empty-filter {
+  text-align: center;
+  padding: 60px 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.empty-filter p {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
 }
 
 @media (max-width: 768px) {
