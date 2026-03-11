@@ -17,9 +17,9 @@ const selectedStatus = ref<string>('all')
 
 const filteredQuotes = computed(() => {
   if (selectedStatus.value === 'all') return quotes.value
-  if (selectedStatus.value === 'new') return quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
   if (selectedStatus.value === 'to_complete') return quotes.value.filter(q => q.status === 'WAITING_FOR_INFO')
-  if (selectedStatus.value === 'in_discussion') return quotes.value.filter(q => q.status === 'RESPONDED')
+  if (selectedStatus.value === 'pending') return quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
+  if (selectedStatus.value === 'received') return quotes.value.filter(q => q.status === 'RESPONDED')
   if (selectedStatus.value === 'accepted') return quotes.value.filter(q => q.status === 'ACCEPTED')
   if (selectedStatus.value === 'closed') return quotes.value.filter(q => q.status === 'CLOSED')
   return quotes.value
@@ -28,9 +28,9 @@ const filteredQuotes = computed(() => {
 const statusCounts = computed(() => {
   return {
     all: quotes.value.length,
-    new: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
     to_complete: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
-    in_discussion: quotes.value.filter(q => q.status === 'RESPONDED').length,
+    pending: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
+    received: quotes.value.filter(q => q.status === 'RESPONDED').length,
     accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
     closed: quotes.value.filter(q => q.status === 'CLOSED').length,
   }
@@ -67,9 +67,9 @@ async function loadQuotes() {
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    SENT: 'Nouveau',
-    VIEWED: 'Nouveau',
-    RESPONDED: 'En discussion',
+    SENT: 'En attente',
+    VIEWED: 'En attente',
+    RESPONDED: 'Proposition reçue',
     ACCEPTED: 'Accepté',
     WAITING_FOR_INFO: 'À compléter',
     CLOSED: 'Clôturé'
@@ -105,14 +105,6 @@ function viewQuote(quoteId: string) {
           <span class="count">{{ statusCounts.all }}</span>
         </button>
         <button
-          @click="selectedStatus = 'new'"
-          class="filter-btn"
-          :class="{ active: selectedStatus === 'new' }"
-        >
-          Nouveaux
-          <span class="count">{{ statusCounts.new }}</span>
-        </button>
-        <button
           @click="selectedStatus = 'to_complete'"
           class="filter-btn"
           :class="{ active: selectedStatus === 'to_complete' }"
@@ -121,12 +113,20 @@ function viewQuote(quoteId: string) {
           <span class="count">{{ statusCounts.to_complete }}</span>
         </button>
         <button
-          @click="selectedStatus = 'in_discussion'"
+          @click="selectedStatus = 'pending'"
           class="filter-btn"
-          :class="{ active: selectedStatus === 'in_discussion' }"
+          :class="{ active: selectedStatus === 'pending' }"
         >
-          En discussion
-          <span class="count">{{ statusCounts.in_discussion }}</span>
+          En attente
+          <span class="count">{{ statusCounts.pending }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'received'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'received' }"
+        >
+          Propositions reçues
+          <span class="count">{{ statusCounts.received }}</span>
         </button>
         <button
           @click="selectedStatus = 'accepted'"

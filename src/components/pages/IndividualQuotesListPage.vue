@@ -27,9 +27,9 @@ const error = ref('')
 const activeFilter = ref<string>('all')
 
 const statusLabels: Record<string, string> = {
-  'SENT': 'Nouveau',
-  'VIEWED': 'Nouveau',
-  'RESPONDED': 'En discussion',
+  'SENT': 'En attente',
+  'VIEWED': 'En attente',
+  'RESPONDED': 'Proposition reçue',
   'ACCEPTED': 'Accepté',
   'WAITING_FOR_INFO': 'À compléter',
   'CLOSED': 'Clôturé'
@@ -45,9 +45,9 @@ const statusColors: Record<string, string> = {
 const filterCounts = computed(() => {
   return {
     all: quotes.value.length,
-    new: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
     to_complete: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
-    in_discussion: quotes.value.filter(q => q.status === 'RESPONDED').length,
+    pending: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
+    received: quotes.value.filter(q => q.status === 'RESPONDED').length,
     accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
     closed: quotes.value.filter(q => q.status === 'CLOSED').length
   }
@@ -56,11 +56,11 @@ const filterCounts = computed(() => {
 const filteredQuotes = computed(() => {
   let filtered = quotes.value
 
-  if (activeFilter.value === 'new') {
-    filtered = filtered.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
-  } else if (activeFilter.value === 'to_complete') {
+  if (activeFilter.value === 'to_complete') {
     filtered = filtered.filter(q => q.status === 'WAITING_FOR_INFO')
-  } else if (activeFilter.value === 'in_discussion') {
+  } else if (activeFilter.value === 'pending') {
+    filtered = filtered.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
+  } else if (activeFilter.value === 'received') {
     filtered = filtered.filter(q => q.status === 'RESPONDED')
   } else if (activeFilter.value === 'accepted') {
     filtered = filtered.filter(q => q.status === 'ACCEPTED')
@@ -199,14 +199,6 @@ function getUrgencyLabel(urgency: string): string {
           </button>
           <button
             class="filter-btn"
-            :class="{ active: activeFilter === 'new' }"
-            @click="activeFilter = 'new'"
-          >
-            Nouveaux
-            <span class="count">{{ filterCounts.new }}</span>
-          </button>
-          <button
-            class="filter-btn"
             :class="{ active: activeFilter === 'to_complete' }"
             @click="activeFilter = 'to_complete'"
           >
@@ -215,11 +207,19 @@ function getUrgencyLabel(urgency: string): string {
           </button>
           <button
             class="filter-btn"
-            :class="{ active: activeFilter === 'in_discussion' }"
-            @click="activeFilter = 'in_discussion'"
+            :class="{ active: activeFilter === 'pending' }"
+            @click="activeFilter = 'pending'"
           >
-            En discussion
-            <span class="count">{{ filterCounts.in_discussion }}</span>
+            En attente
+            <span class="count">{{ filterCounts.pending }}</span>
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: activeFilter === 'received' }"
+            @click="activeFilter = 'received'"
+          >
+            Propositions reçues
+            <span class="count">{{ filterCounts.received }}</span>
           </button>
           <button
             class="filter-btn"
