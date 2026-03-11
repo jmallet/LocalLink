@@ -74,7 +74,7 @@ function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     SENT: 'Nouveau',
     VIEWED: 'Vu',
-    RESPONDED: 'Répondu',
+    RESPONDED: 'En cours',
     ACCEPTED: 'Validé',
     WAITING_FOR_INFO: 'En attente d\'info',
     CLOSED: 'Fermé'
@@ -107,7 +107,7 @@ function viewQuote(quoteId: string) {
           class="filter-btn"
           :class="{ active: selectedStatus === key }"
         >
-          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'responded' ? 'Répondus' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
+          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'responded' ? 'En cours' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
           <span class="count">{{ count }}</span>
         </button>
       </div>
