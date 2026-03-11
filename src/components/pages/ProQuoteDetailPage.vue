@@ -149,11 +149,11 @@ async function closeQuote() {
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     SENT: 'Nouveau',
-    VIEWED: 'Vu',
-    RESPONDED: 'Répondu',
-    ACCEPTED: 'Validé',
-    WAITING_FOR_INFO: 'En attente d\'infos',
-    CLOSED: 'Fermé'
+    VIEWED: 'Nouveau',
+    RESPONDED: 'En discussion',
+    ACCEPTED: 'Accepté',
+    WAITING_FOR_INFO: 'À compléter',
+    CLOSED: 'Clôturé'
   }
   return labels[status] || status
 }
