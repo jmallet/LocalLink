@@ -18,16 +18,20 @@ const selectedStatus = ref<string>('all')
 const filteredQuotes = computed(() => {
   if (selectedStatus.value === 'all') return quotes.value
   if (selectedStatus.value === 'new') return quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
-  return quotes.value.filter(q => q.status === selectedStatus.value.toUpperCase())
+  if (selectedStatus.value === 'to_complete') return quotes.value.filter(q => q.status === 'WAITING_FOR_INFO')
+  if (selectedStatus.value === 'in_discussion') return quotes.value.filter(q => q.status === 'RESPONDED')
+  if (selectedStatus.value === 'accepted') return quotes.value.filter(q => q.status === 'ACCEPTED')
+  if (selectedStatus.value === 'closed') return quotes.value.filter(q => q.status === 'CLOSED')
+  return quotes.value
 })
 
 const statusCounts = computed(() => {
   return {
     all: quotes.value.length,
     new: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
-    responded: quotes.value.filter(q => q.status === 'RESPONDED').length,
+    to_complete: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
+    in_discussion: quotes.value.filter(q => q.status === 'RESPONDED').length,
     accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
-    waiting: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
     closed: quotes.value.filter(q => q.status === 'CLOSED').length,
   }
 })
@@ -73,11 +77,11 @@ async function loadQuotes() {
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     SENT: 'Nouveau',
-    VIEWED: 'Vu',
-    RESPONDED: 'En cours',
-    ACCEPTED: 'Validé',
-    WAITING_FOR_INFO: 'En attente d\'info',
-    CLOSED: 'Fermé'
+    VIEWED: 'Nouveau',
+    RESPONDED: 'En discussion',
+    ACCEPTED: 'Accepté',
+    WAITING_FOR_INFO: 'À compléter',
+    CLOSED: 'Clôturé'
   }
   return labels[status] || status
 }
@@ -101,14 +105,52 @@ function viewQuote(quoteId: string) {
 
       <div class="filters">
         <button
-          v-for="(count, key) in statusCounts"
-          :key="key"
-          @click="selectedStatus = key"
+          @click="selectedStatus = 'all'"
           class="filter-btn"
-          :class="{ active: selectedStatus === key }"
+          :class="{ active: selectedStatus === 'all' }"
         >
-          {{ key === 'all' ? 'Tous' : key === 'new' ? 'Nouveaux' : key === 'responded' ? 'En cours' : key === 'accepted' ? 'Validés' : key === 'waiting' ? 'En attente' : 'Fermés' }}
-          <span class="count">{{ count }}</span>
+          Tous
+          <span class="count">{{ statusCounts.all }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'new'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'new' }"
+        >
+          Nouveaux
+          <span class="count">{{ statusCounts.new }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'to_complete'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'to_complete' }"
+        >
+          À compléter
+          <span class="count">{{ statusCounts.to_complete }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'in_discussion'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'in_discussion' }"
+        >
+          En discussion
+          <span class="count">{{ statusCounts.in_discussion }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'accepted'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'accepted' }"
+        >
+          Acceptés
+          <span class="count">{{ statusCounts.accepted }}</span>
+        </button>
+        <button
+          @click="selectedStatus = 'closed'"
+          class="filter-btn"
+          :class="{ active: selectedStatus === 'closed' }"
+        >
+          Clôturés
+          <span class="count">{{ statusCounts.closed }}</span>
         </button>
       </div>
 
@@ -136,9 +178,6 @@ function viewQuote(quoteId: string) {
             <div class="status-badges">
               <span class="status-badge" :class="quote.status.toLowerCase()">
                 {{ getStatusLabel(quote.status) }}
-              </span>
-              <span v-if="quote.status === 'SENT' || quote.status === 'VIEWED'" class="status-badge waiting">
-                En attente
               </span>
             </div>
           </div>
