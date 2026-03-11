@@ -18,6 +18,7 @@ interface QuoteRequest {
   created_at: string
   proposals_count?: number
   accepted_count?: number
+  unanswered_clarifications_count?: number
 }
 
 const router = useRouter()
@@ -30,7 +31,7 @@ function getStatusLabel(quote: QuoteRequest): string {
   if (quote.accepted_count && quote.accepted_count > 0) {
     return 'Accepté'
   }
-  if (quote.status === 'WAITING_FOR_INFO') {
+  if (quote.unanswered_clarifications_count && quote.unanswered_clarifications_count > 0) {
     return 'À compléter'
   }
   if (quote.status === 'RESPONDED' || (quote.proposals_count && quote.proposals_count > 0)) {
@@ -46,7 +47,7 @@ function getStatusColor(quote: QuoteRequest): string {
   if (quote.accepted_count && quote.accepted_count > 0) {
     return '#059669'
   }
-  if (quote.status === 'WAITING_FOR_INFO') {
+  if (quote.unanswered_clarifications_count && quote.unanswered_clarifications_count > 0) {
     return '#f59e0b'
   }
   if (quote.status === 'RESPONDED' || (quote.proposals_count && quote.proposals_count > 0)) {
@@ -61,10 +62,10 @@ function getStatusColor(quote: QuoteRequest): string {
 const filterCounts = computed(() => {
   return {
     all: quotes.value.length,
-    to_complete: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
-    pending: quotes.value.filter(q => q.status === 'SENT' || q.status === 'VIEWED').length,
-    received: quotes.value.filter(q => q.status === 'RESPONDED').length,
-    accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
+    to_complete: quotes.value.filter(q => q.unanswered_clarifications_count && q.unanswered_clarifications_count > 0).length,
+    pending: quotes.value.filter(q => !q.proposals_count && !q.unanswered_clarifications_count && q.status !== 'CLOSED' && (!q.accepted_count || q.accepted_count === 0)).length,
+    received: quotes.value.filter(q => q.proposals_count && q.proposals_count > 0 && (!q.accepted_count || q.accepted_count === 0)).length,
+    accepted: quotes.value.filter(q => q.accepted_count && q.accepted_count > 0).length,
     closed: quotes.value.filter(q => q.status === 'CLOSED').length
   }
 })
@@ -73,13 +74,13 @@ const filteredQuotes = computed(() => {
   let filtered = quotes.value
 
   if (activeFilter.value === 'to_complete') {
-    filtered = filtered.filter(q => q.status === 'WAITING_FOR_INFO')
+    filtered = filtered.filter(q => q.unanswered_clarifications_count && q.unanswered_clarifications_count > 0)
   } else if (activeFilter.value === 'pending') {
-    filtered = filtered.filter(q => q.status === 'SENT' || q.status === 'VIEWED')
+    filtered = filtered.filter(q => !q.proposals_count && !q.unanswered_clarifications_count && q.status !== 'CLOSED' && (!q.accepted_count || q.accepted_count === 0))
   } else if (activeFilter.value === 'received') {
-    filtered = filtered.filter(q => q.status === 'RESPONDED')
+    filtered = filtered.filter(q => q.proposals_count && q.proposals_count > 0 && (!q.accepted_count || q.accepted_count === 0))
   } else if (activeFilter.value === 'accepted') {
-    filtered = filtered.filter(q => q.status === 'ACCEPTED')
+    filtered = filtered.filter(q => q.accepted_count && q.accepted_count > 0)
   } else if (activeFilter.value === 'closed') {
     filtered = filtered.filter(q => q.status === 'CLOSED')
   }
@@ -120,7 +121,8 @@ async function loadQuotes() {
         urgency,
         status,
         created_at,
-        quote_proposals(status)
+        quote_proposals(status),
+        quote_clarifications(answer)
       `)
       .eq('requester_id', user.value.id)
       .order('created_at', { ascending: false })
@@ -129,6 +131,7 @@ async function loadQuotes() {
 
     quotes.value = (data || []).map((quote: any) => {
       const proposals = quote.quote_proposals || []
+      const clarifications = quote.quote_clarifications || []
       return {
         id: quote.id,
         title: quote.title,
@@ -141,7 +144,8 @@ async function loadQuotes() {
         status: quote.status,
         created_at: quote.created_at,
         proposals_count: proposals.length,
-        accepted_count: proposals.filter((p: any) => p.status === 'ACCEPTED').length
+        accepted_count: proposals.filter((p: any) => p.status === 'ACCEPTED').length,
+        unanswered_clarifications_count: clarifications.filter((c: any) => !c.answer).length
       }
     })
   } catch (err) {
