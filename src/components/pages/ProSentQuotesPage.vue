@@ -2,9 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { user, profile } from '../../stores/auth'
+import { user } from '../../stores/auth'
 import DashboardLayout from '../dashboard/DashboardLayout.vue'
-import IndividualDashboardLayout from '../dashboard/IndividualDashboardLayout.vue'
 import type { QuoteRequest, Company } from '../../types/database'
 
 interface QuoteWithCompany extends QuoteRequest {
@@ -53,6 +52,7 @@ async function loadQuotes() {
         target_company:companies!quote_requests_target_company_id_fkey(*)
       `)
       .eq('requester_id', user.value.id)
+      .eq('requester_type', 'ACHETEUR_PRO')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -83,12 +83,12 @@ function viewQuote(quoteId: string) {
 </script>
 
 <template>
-  <component :is="profile?.user_type === 'PARTICULIER' ? IndividualDashboardLayout : DashboardLayout">
+  <DashboardLayout>
     <div class="pro-sent-quotes">
       <div class="page-header">
         <div>
-          <h1>Mes demandes de devis</h1>
-          <p class="subtitle">Suivez vos demandes de devis</p>
+          <h1>Devis envoyés</h1>
+          <p class="subtitle">Suivez vos demandes de devis envoyées</p>
         </div>
         <button class="btn-primary" @click="router.push({ name: 'pros-locaux' })">
           Nouvelle demande
@@ -209,7 +209,7 @@ function viewQuote(quoteId: string) {
         </div>
       </div>
     </div>
-  </component>
+  </DashboardLayout>
 </template>
 
 <style scoped>

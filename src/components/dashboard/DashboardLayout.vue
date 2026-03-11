@@ -12,7 +12,7 @@ const menuItems = computed(() => {
   return [
     { name: 'pro-dashboard' as const, label: 'Tableau de bord', icon: '📊' },
     { name: 'pro-received-quotes' as const, label: 'Devis reçus', icon: '📥' },
-    { name: 'pro-sent-quotes' as const, label: 'Mes demandes de devis', icon: '📤' },
+    { name: 'pro-sent-quotes' as const, label: 'Devis envoyés', icon: '📤' },
     { name: 'pro-company-profile' as const, label: 'Ma fiche entreprise', icon: '🏢' },
     { name: 'dashboard-products' as const, label: 'Produits & Services', icon: '📦' },
     { name: 'pro-settings' as const, label: 'Paramètres', icon: '⚙️' }

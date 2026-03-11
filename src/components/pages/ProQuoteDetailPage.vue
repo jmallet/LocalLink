@@ -2,9 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../lib/supabase'
-import { user, currentCompany, profile } from '../../stores/auth'
+import { user, currentCompany } from '../../stores/auth'
 import DashboardLayout from '../dashboard/DashboardLayout.vue'
-import IndividualDashboardLayout from '../dashboard/IndividualDashboardLayout.vue'
 import type { QuoteRequest, Company, Profile } from '../../types/database'
 
 interface QuoteWithDetails extends QuoteRequest {
@@ -377,7 +376,7 @@ function unlockContact() {
 </script>
 
 <template>
-  <component :is="profile?.user_type === 'PARTICULIER' ? IndividualDashboardLayout : DashboardLayout">
+  <DashboardLayout>
     <div class="pro-quote-detail">
       <div v-if="loading" class="loading">
         <div class="spinner"></div>
@@ -714,7 +713,7 @@ function unlockContact() {
         </div>
       </div>
     </div>
-  </component>
+  </DashboardLayout>
 </template>
 
 <style scoped>
