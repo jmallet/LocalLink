@@ -232,7 +232,7 @@ async function submitResponse() {
         return
       }
 
-      if (proposal.value) {
+      if (proposal.value && proposal.value.status !== 'REJECTED') {
         const { data, error } = await supabase
           .from('quote_proposals')
           .update({
@@ -242,6 +242,7 @@ async function submitResponse() {
             price_max: null,
             proposal_message: proposalForm.value.message.trim() || null,
             delivery_time: proposalForm.value.deliveryTime.trim() || null,
+            status: 'PENDING',
             updated_at: new Date().toISOString()
           })
           .eq('id', proposal.value.id)
@@ -259,7 +260,8 @@ async function submitResponse() {
             proposal_type: 'FIXED_PRICE',
             proposed_amount: proposalForm.value.fixedPrice,
             proposal_message: proposalForm.value.message.trim() || null,
-            delivery_time: proposalForm.value.deliveryTime.trim() || null
+            delivery_time: proposalForm.value.deliveryTime.trim() || null,
+            status: 'PENDING'
           })
           .select()
           .single()
@@ -289,7 +291,7 @@ async function submitResponse() {
         return
       }
 
-      if (proposal.value) {
+      if (proposal.value && proposal.value.status !== 'REJECTED') {
         const { data, error } = await supabase
           .from('quote_proposals')
           .update({
@@ -299,6 +301,7 @@ async function submitResponse() {
             price_max: proposalForm.value.priceMax,
             proposal_message: proposalForm.value.message.trim() || null,
             delivery_time: proposalForm.value.deliveryTime.trim() || null,
+            status: 'PENDING',
             updated_at: new Date().toISOString()
           })
           .eq('id', proposal.value.id)
@@ -317,7 +320,8 @@ async function submitResponse() {
             price_min: proposalForm.value.priceMin,
             price_max: proposalForm.value.priceMax,
             proposal_message: proposalForm.value.message.trim() || null,
-            delivery_time: proposalForm.value.deliveryTime.trim() || null
+            delivery_time: proposalForm.value.deliveryTime.trim() || null,
+            status: 'PENDING'
           })
           .select()
           .single()
