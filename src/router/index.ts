@@ -191,12 +191,7 @@ const router = createRouter({
     {
       path: '/particulier/devis',
       name: 'individual-quotes',
-      component: IndividualQuotesListPage,
-      meta: {
-        title: 'Mes demandes de devis - LocalLink',
-        requiresAuth: true,
-        requiresIndividual: true
-      }
+      redirect: { name: 'pro-sent-quotes' }
     },
     {
       path: '/particulier/nouvelle-demande',
@@ -211,12 +206,7 @@ const router = createRouter({
     {
       path: '/particulier/devis/:id',
       name: 'individual-quote-detail',
-      component: IndividualQuoteDetailPage,
-      meta: {
-        title: 'Détail de la demande - LocalLink',
-        requiresAuth: true,
-        requiresIndividual: true
-      }
+      redirect: to => ({ name: 'pro-quote-detail', params: { id: to.params.id } })
     },
     {
       path: '/dashboard/pro',
@@ -243,9 +233,8 @@ const router = createRouter({
       name: 'pro-sent-quotes',
       component: ProSentQuotesPage,
       meta: {
-        title: 'Devis envoyés - LocalLink',
-        requiresAuth: true,
-        requiresPro: true
+        title: 'Mes demandes de devis - LocalLink',
+        requiresAuth: true
       }
     },
     {
@@ -273,9 +262,8 @@ const router = createRouter({
       name: 'pro-quote-detail',
       component: ProQuoteDetailPage,
       meta: {
-        title: 'Détail du devis - LocalLink',
-        requiresAuth: true,
-        requiresPro: true
+        title: 'Détail de la demande - LocalLink',
+        requiresAuth: true
       }
     }
   ],
