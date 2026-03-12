@@ -140,9 +140,22 @@ async function loadQuotes() {
           .maybeSingle()
       ])
 
-      if (clarificationsRes.error) throw clarificationsRes.error
-      if (proposalsRes.error) throw proposalsRes.error
-      if (leadAccessRes.error) throw leadAccessRes.error
+      console.log(`Quote ${quote.title}:`, {
+        clarifications: clarificationsRes.data?.length || 0,
+        proposals: proposalsRes.data?.length || 0,
+        clarificationsData: clarificationsRes.data,
+        proposalsData: proposalsRes.data
+      })
+
+      if (clarificationsRes.error) {
+        console.error('Clarifications error:', clarificationsRes.error)
+      }
+      if (proposalsRes.error) {
+        console.error('Proposals error:', proposalsRes.error)
+      }
+      if (leadAccessRes.error) {
+        console.error('Lead access error:', leadAccessRes.error)
+      }
 
       quote.clarifications_count = clarificationsRes.data?.length || 0
       quote.proposals_count = proposalsRes.data?.length || 0
@@ -152,6 +165,9 @@ async function loadQuotes() {
       quoteClarifications.value[quote.id] = clarificationsRes.data || []
       quoteProposals.value[quote.id] = proposalsRes.data || []
     }
+
+    console.log('All clarifications:', quoteClarifications.value)
+    console.log('All proposals:', quoteProposals.value)
 
     quotes.value = quotesData
   } catch (error) {
