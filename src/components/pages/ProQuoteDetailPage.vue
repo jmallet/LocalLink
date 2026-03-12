@@ -232,7 +232,7 @@ async function submitResponse() {
         return
       }
 
-      if (proposal.value && proposal.value.status !== 'REJECTED') {
+      if (proposal.value) {
         const { data, error } = await supabase
           .from('quote_proposals')
           .update({
@@ -243,6 +243,8 @@ async function submitResponse() {
             proposal_message: proposalForm.value.message.trim() || null,
             delivery_time: proposalForm.value.deliveryTime.trim() || null,
             status: 'PENDING',
+            rejected_at: null,
+            rejection_reason: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', proposal.value.id)
@@ -291,7 +293,7 @@ async function submitResponse() {
         return
       }
 
-      if (proposal.value && proposal.value.status !== 'REJECTED') {
+      if (proposal.value) {
         const { data, error } = await supabase
           .from('quote_proposals')
           .update({
@@ -302,6 +304,8 @@ async function submitResponse() {
             proposal_message: proposalForm.value.message.trim() || null,
             delivery_time: proposalForm.value.deliveryTime.trim() || null,
             status: 'PENDING',
+            rejected_at: null,
+            rejection_reason: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', proposal.value.id)
