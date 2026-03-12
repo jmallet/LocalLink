@@ -101,6 +101,18 @@ onMounted(async () => {
 async function loadQuotes() {
   loading.value = true
   try {
+    // Vérifier l'authentification
+    const { data: { user } } = await supabase.auth.getUser()
+    console.log('Current user:', user?.id)
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', user?.id)
+      .maybeSingle()
+
+    console.log('User profile:', profileData)
+
     const { data, error } = await supabase
       .from('quote_requests')
       .select(`
@@ -144,7 +156,9 @@ async function loadQuotes() {
         clarifications: clarificationsRes.data?.length || 0,
         proposals: proposalsRes.data?.length || 0,
         clarificationsData: clarificationsRes.data,
-        proposalsData: proposalsRes.data
+        proposalsData: proposalsRes.data,
+        clarificationsError: clarificationsRes.error,
+        proposalsError: proposalsRes.error
       })
 
       if (clarificationsRes.error) {
