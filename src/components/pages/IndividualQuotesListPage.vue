@@ -132,6 +132,8 @@ async function loadQuotes() {
     quotes.value = (data || []).map((quote: any) => {
       const proposals = quote.quote_proposals || []
       const clarifications = quote.quote_clarifications || []
+      // Ne compter que les propositions actives (non rejetées, non en attente d'approbation)
+      const activeProposals = proposals.filter((p: any) => p.status !== 'REJECTED' && p.status !== 'PENDING')
       return {
         id: quote.id,
         title: quote.title,
@@ -143,7 +145,7 @@ async function loadQuotes() {
         urgency: quote.urgency,
         status: quote.status,
         created_at: quote.created_at,
-        proposals_count: proposals.length,
+        proposals_count: activeProposals.length,
         accepted_count: proposals.filter((p: any) => p.status === 'ACCEPTED').length,
         unanswered_clarifications_count: clarifications.filter((c: any) => !c.answer).length
       }
