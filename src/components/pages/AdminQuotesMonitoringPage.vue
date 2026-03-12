@@ -374,11 +374,11 @@ function getProposalsForQuote(quoteId: string): QuoteProposal[] {
             <span class="activity-value">{{ getQuoteActivity(quote) }}</span>
           </div>
 
-          <div v-if="getClarificationsForQuote(quote.id).length > 0" class="quote-section">
+          <div v-if="quote.clarifications_count && quote.clarifications_count > 0" class="quote-section">
             <h4 class="section-header">Questions / Clarifications</h4>
             <div class="clarifications-preview">
               <div
-                v-for="clarification in getClarificationsForQuote(quote.id).slice(0, 3)"
+                v-for="clarification in quoteClarifications[quote.id]?.slice(0, 3) || []"
                 :key="clarification.id"
                 class="clarification-preview-item"
               >
@@ -401,17 +401,17 @@ function getProposalsForQuote(quoteId: string): QuoteProposal[] {
                 </p>
                 <p v-else class="clarification-pending-badge">En attente de réponse</p>
               </div>
-              <p v-if="getClarificationsForQuote(quote.id).length > 3" class="see-more">
-                +{{ getClarificationsForQuote(quote.id).length - 3 }} autre(s) question(s)
+              <p v-if="(quoteClarifications[quote.id]?.length || 0) > 3" class="see-more">
+                +{{ (quoteClarifications[quote.id]?.length || 0) - 3 }} autre(s) question(s)
               </p>
             </div>
           </div>
 
-          <div v-if="getProposalsForQuote(quote.id).length > 0" class="quote-section">
+          <div v-if="quote.proposals_count && quote.proposals_count > 0" class="quote-section">
             <h4 class="section-header">Propositions commerciales</h4>
             <div class="proposals-preview">
               <div
-                v-for="proposal in getProposalsForQuote(quote.id)"
+                v-for="proposal in quoteProposals[quote.id] || []"
                 :key="proposal.id"
                 class="proposal-preview-item"
                 :class="proposal.status.toLowerCase()"
