@@ -29,11 +29,12 @@ interface QuoteRequest {
 interface QuoteClarification {
   id: string
   quote_request_id: string
-  asked_by: string
+  producer_company_id: string
   question: string
   answer: string | null
   created_at: string
   answered_at: string | null
+  company?: any
 }
 
 interface QuoteProposal {
@@ -54,17 +55,24 @@ interface QuoteProposal {
 }
 
 const quotes = ref<QuoteRequest[]>([])
+const quoteClarifications = ref<Record<string, QuoteClarification[]>>({})
+const quoteProposals = ref<Record<string, QuoteProposal[]>>({})
 const loading = ref(true)
 const selectedQuote = ref<QuoteRequest | null>(null)
 const clarifications = ref<QuoteClarification[]>([])
 const proposals = ref<QuoteProposal[]>([])
 const loadingDetails = ref(false)
 const showDetailsModal = ref(false)
-const filterStatus = ref<'all' | 'pending' | 'waiting_for_info' | 'responded' | 'accepted' | 'closed'>('all')
+const filterStatus = ref<'all' | 'pending' | 'waiting_for_info' | 'responded' | 'accepted' | 'sold' | 'closed'>('all')
 const message = ref({ type: '', text: '' })
 
 const filteredQuotes = computed(() => {
   if (filterStatus.value === 'all') return quotes.value
+
+  if (filterStatus.value === 'sold') {
+    return quotes.value.filter(q => q.lead_access !== null)
+  }
+
   const statusMap: Record<string, string> = {
     pending: 'PENDING',
     waiting_for_info: 'WAITING_FOR_INFO',
@@ -72,16 +80,18 @@ const filteredQuotes = computed(() => {
     accepted: 'ACCEPTED',
     closed: 'CLOSED'
   }
-  return quotes.value.filter(q => q.status === statusMap[filterStatus.value])
+
+  return quotes.value.filter(q => q.status === statusMap[filterStatus.value] && !q.lead_access)
 })
 
 const statusCounts = computed(() => ({
   all: quotes.value.length,
-  pending: quotes.value.filter(q => q.status === 'PENDING').length,
-  waiting_for_info: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO').length,
-  responded: quotes.value.filter(q => q.status === 'RESPONDED').length,
-  accepted: quotes.value.filter(q => q.status === 'ACCEPTED').length,
-  closed: quotes.value.filter(q => q.status === 'CLOSED').length
+  pending: quotes.value.filter(q => q.status === 'PENDING' && !q.lead_access).length,
+  waiting_for_info: quotes.value.filter(q => q.status === 'WAITING_FOR_INFO' && !q.lead_access).length,
+  responded: quotes.value.filter(q => q.status === 'RESPONDED' && !q.lead_access).length,
+  accepted: quotes.value.filter(q => q.status === 'ACCEPTED' && !q.lead_access).length,
+  sold: quotes.value.filter(q => q.lead_access !== null).length,
+  closed: quotes.value.filter(q => q.status === 'CLOSED' && !q.lead_access).length
 }))
 
 onMounted(async () => {
@@ -109,23 +119,38 @@ async function loadQuotes() {
       const [clarificationsRes, proposalsRes, leadAccessRes] = await Promise.all([
         supabase
           .from('quote_clarifications')
-          .select('id', { count: 'exact', head: true })
-          .eq('quote_request_id', quote.id),
+          .select(`
+            *,
+            company:companies!quote_clarifications_producer_company_id_fkey(id, name)
+          `)
+          .eq('quote_request_id', quote.id)
+          .order('created_at', { ascending: false }),
         supabase
           .from('quote_proposals')
-          .select('id, status', { count: 'exact' })
-          .eq('quote_request_id', quote.id),
+          .select(`
+            *,
+            company:companies!quote_proposals_producer_company_id_fkey(id, name, city)
+          `)
+          .eq('quote_request_id', quote.id)
+          .order('created_at', { ascending: false }),
         supabase
-          .from('lead_access')
+          .from('lead_accesses')
           .select('*')
           .eq('quote_request_id', quote.id)
           .maybeSingle()
       ])
 
-      quote.clarifications_count = clarificationsRes.count || 0
-      quote.proposals_count = proposalsRes.count || 0
+      if (clarificationsRes.error) throw clarificationsRes.error
+      if (proposalsRes.error) throw proposalsRes.error
+      if (leadAccessRes.error) throw leadAccessRes.error
+
+      quote.clarifications_count = clarificationsRes.data?.length || 0
+      quote.proposals_count = proposalsRes.data?.length || 0
       quote.accepted_proposals_count = proposalsRes.data?.filter((p: any) => p.status === 'ACCEPTED').length || 0
       quote.lead_access = leadAccessRes.data
+
+      quoteClarifications.value[quote.id] = clarificationsRes.data || []
+      quoteProposals.value[quote.id] = proposalsRes.data || []
     }
 
     quotes.value = quotesData
@@ -182,15 +207,19 @@ function showMessage(type: string, text: string) {
 }
 
 function getStatusBadge(quote: QuoteRequest) {
+  if (quote.lead_access) {
+    return { label: 'Lead vendu', class: 'sold' }
+  }
+
   switch (quote.status) {
     case 'PENDING':
       return { label: 'En discussion', class: 'pending' }
     case 'WAITING_FOR_INFO':
       return { label: 'En attente d\'info', class: 'waiting' }
     case 'RESPONDED':
-      return { label: 'Proposition reçue', class: 'responded' }
+      return { label: 'Propositions reçues', class: 'responded' }
     case 'ACCEPTED':
-      return { label: 'Lead vendu', class: 'accepted' }
+      return { label: 'Proposition acceptée', class: 'accepted' }
     case 'CLOSED':
       return { label: 'Clôturé', class: 'closed' }
     default:
@@ -209,11 +238,23 @@ function getQuoteActivity(quote: QuoteRequest) {
     activities.push(`${quote.proposals_count} proposition(s)`)
   }
 
+  if (quote.accepted_proposals_count && quote.accepted_proposals_count > 0) {
+    activities.push(`${quote.accepted_proposals_count} acceptée(s)`)
+  }
+
   if (quote.lead_access) {
-    activities.push('Lead ouvert')
+    activities.push('Lead payé et ouvert')
   }
 
   return activities.length > 0 ? activities.join(' • ') : 'Aucune activité'
+}
+
+function getClarificationsForQuote(quoteId: string): QuoteClarification[] {
+  return quoteClarifications.value[quoteId] || []
+}
+
+function getProposalsForQuote(quoteId: string): QuoteProposal[] {
+  return quoteProposals.value[quoteId] || []
 }
 </script>
 
@@ -263,7 +304,14 @@ function getQuoteActivity(quote: QuoteRequest) {
           class="filter-btn"
           :class="{ active: filterStatus === 'accepted' }"
         >
-          Leads vendus <span class="count">{{ statusCounts.accepted }}</span>
+          Propositions acceptées <span class="count">{{ statusCounts.accepted }}</span>
+        </button>
+        <button
+          @click="filterStatus = 'sold'"
+          class="filter-btn filter-btn-sold"
+          :class="{ active: filterStatus === 'sold' }"
+        >
+          Leads vendus <span class="count">{{ statusCounts.sold }}</span>
         </button>
         <button
           @click="filterStatus = 'closed'"
@@ -324,6 +372,82 @@ function getQuoteActivity(quote: QuoteRequest) {
           <div class="quote-activity">
             <span class="activity-label">Activité:</span>
             <span class="activity-value">{{ getQuoteActivity(quote) }}</span>
+          </div>
+
+          <div v-if="getClarificationsForQuote(quote.id).length > 0" class="quote-section">
+            <h4 class="section-header">Questions / Clarifications</h4>
+            <div class="clarifications-preview">
+              <div
+                v-for="clarification in getClarificationsForQuote(quote.id).slice(0, 3)"
+                :key="clarification.id"
+                class="clarification-preview-item"
+              >
+                <div class="clarification-meta">
+                  <strong>{{ clarification.company?.name || 'Entreprise' }}</strong>
+                  <span class="clarification-time">
+                    {{ new Date(clarification.created_at).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) }}
+                  </span>
+                </div>
+                <p class="clarification-text">
+                  <span class="label-question">Q:</span> {{ clarification.question }}
+                </p>
+                <p v-if="clarification.answer" class="clarification-text answer">
+                  <span class="label-answer">R:</span> {{ clarification.answer }}
+                </p>
+                <p v-else class="clarification-pending-badge">En attente de réponse</p>
+              </div>
+              <p v-if="getClarificationsForQuote(quote.id).length > 3" class="see-more">
+                +{{ getClarificationsForQuote(quote.id).length - 3 }} autre(s) question(s)
+              </p>
+            </div>
+          </div>
+
+          <div v-if="getProposalsForQuote(quote.id).length > 0" class="quote-section">
+            <h4 class="section-header">Propositions commerciales</h4>
+            <div class="proposals-preview">
+              <div
+                v-for="proposal in getProposalsForQuote(quote.id)"
+                :key="proposal.id"
+                class="proposal-preview-item"
+                :class="proposal.status.toLowerCase()"
+              >
+                <div class="proposal-preview-header">
+                  <div class="proposal-company-info">
+                    <strong>{{ proposal.company?.name || 'Entreprise' }}</strong>
+                    <span v-if="proposal.company?.city" class="proposal-city">{{ proposal.company.city }}</span>
+                  </div>
+                  <span class="proposal-mini-badge" :class="proposal.status.toLowerCase()">
+                    {{ proposal.status === 'PENDING' ? 'En attente' : proposal.status === 'ACCEPTED' ? 'Acceptée' : 'Rejetée' }}
+                  </span>
+                </div>
+                <div class="proposal-preview-details">
+                  <div v-if="proposal.proposed_amount || (proposal.price_min && proposal.price_max)" class="proposal-price">
+                    <span class="price-icon">💰</span>
+                    <span v-if="proposal.proposed_amount">{{ proposal.proposed_amount }} €</span>
+                    <span v-else>{{ proposal.price_min }} € - {{ proposal.price_max }} €</span>
+                  </div>
+                  <div v-if="proposal.delivery_time" class="proposal-delivery">
+                    <span class="delivery-icon">⏱️</span>
+                    <span>{{ proposal.delivery_time }}</span>
+                  </div>
+                </div>
+                <p v-if="proposal.proposal_message" class="proposal-preview-message">
+                  {{ proposal.proposal_message.length > 120 ? proposal.proposal_message.substring(0, 120) + '...' : proposal.proposal_message }}
+                </p>
+                <p v-if="proposal.status === 'ACCEPTED' && proposal.accepted_at" class="proposal-accepted-info">
+                  Acceptée le {{ new Date(proposal.accepted_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  }) }}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div class="quote-footer">
@@ -613,6 +737,23 @@ function getQuoteActivity(quote: QuoteRequest) {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.filter-btn-sold {
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.filter-btn-sold:hover {
+  border-color: #10b981;
+  color: #065f46;
+  background: #ecfdf5;
+}
+
+.filter-btn-sold.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
 .loading {
   display: flex;
   flex-direction: column;
@@ -683,6 +824,11 @@ function getQuoteActivity(quote: QuoteRequest) {
 }
 
 .quote-card.accepted {
+  border-left: 4px solid #8b5cf6;
+  background: #faf5ff;
+}
+
+.quote-card.sold {
   border-left: 4px solid #10b981;
   background: #ecfdf5;
 }
@@ -740,6 +886,11 @@ function getQuoteActivity(quote: QuoteRequest) {
 }
 
 .status-badge.accepted {
+  background: #ede9fe;
+  color: #6b21a8;
+}
+
+.status-badge.sold {
   background: #d1fae5;
   color: #065f46;
 }
@@ -1185,6 +1336,218 @@ function getQuoteActivity(quote: QuoteRequest) {
   color: #6b7280;
   font-style: italic;
   padding: 2rem;
+}
+
+.quote-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.clarifications-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.clarification-preview-item {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  padding: 0.875rem;
+}
+
+.clarification-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.clarification-meta strong {
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.clarification-time {
+  font-size: 0.75rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.clarification-text {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #374151;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.clarification-text.answer {
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 0.5rem;
+}
+
+.label-question {
+  font-weight: 700;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.label-answer {
+  font-weight: 700;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.clarification-pending-badge {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.see-more {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+  margin: 0.5rem 0 0 0;
+}
+
+.proposals-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.proposal-preview-item {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.proposal-preview-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.proposal-preview-item.accepted {
+  border-left: 3px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.proposal-preview-item.rejected {
+  border-left: 3px solid #ef4444;
+  background: rgba(239, 68, 68, 0.03);
+  opacity: 0.7;
+}
+
+.proposal-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.proposal-company-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.proposal-company-info strong {
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.proposal-city {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.proposal-mini-badge {
+  padding: 0.25rem 0.625rem;
+  border-radius: 12px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.proposal-mini-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.proposal-mini-badge.accepted {
+  background: #ede9fe;
+  color: #6b21a8;
+}
+
+.proposal-mini-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.proposal-preview-details {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.proposal-price,
+.proposal-delivery {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.price-icon,
+.delivery-icon {
+  font-size: 1rem;
+}
+
+.proposal-preview-message {
+  margin: 0.75rem 0 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.proposal-accepted-info {
+  margin: 0.75rem 0 0 0;
+  padding: 0.5rem;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b21a8;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
