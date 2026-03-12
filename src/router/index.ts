@@ -16,6 +16,7 @@ import QuotesPage from '../components/pages/QuotesPage.vue'
 import VisibilityPage from '../components/pages/VisibilityPage.vue'
 import AdminPage from '../components/pages/AdminPage.vue'
 import AdminQuoteRequestsPage from '../components/pages/AdminQuoteRequestsPage.vue'
+import AdminQuotesMonitoringPage from '../components/pages/AdminQuotesMonitoringPage.vue'
 import IndividualProfilePage from '../components/pages/IndividualProfilePage.vue'
 import IndividualQuotesListPage from '../components/pages/IndividualQuotesListPage.vue'
 import IndividualNewQuotePage from '../components/pages/IndividualNewQuotePage.vue'
@@ -164,6 +165,16 @@ const router = createRouter({
       component: AdminQuoteRequestsPage,
       meta: {
         title: 'Gestion des demandes de devis - LocalLink',
+        requiresAuth: true,
+        requiresAdmin: true
+      }
+    },
+    {
+      path: '/admin/suivi-devis',
+      name: 'admin-quotes-monitoring',
+      component: AdminQuotesMonitoringPage,
+      meta: {
+        title: 'Suivi des devis - LocalLink',
         requiresAuth: true,
         requiresAdmin: true
       }

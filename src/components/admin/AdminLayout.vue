@@ -13,7 +13,8 @@ const menuItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: '📊', isInternal: true },
   { id: 'users', label: 'Utilisateurs', icon: '👥', isInternal: true },
   { id: 'companies', label: 'Sociétés', icon: '🏢', isInternal: true },
-  { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis' }
+  { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis' },
+  { name: 'admin-quotes-monitoring', label: 'Suivi des devis', icon: '📈', path: '/admin/suivi-devis' }
 ]
 
 onMounted(async () => {
