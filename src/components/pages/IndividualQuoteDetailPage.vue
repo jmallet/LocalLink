@@ -192,7 +192,7 @@ async function acceptProposal(proposalId: string) {
   }
 
   try {
-    const { error } = await supabase
+    const { error: proposalError } = await supabase
       .from('quote_proposals')
       .update({
         status: 'ACCEPTED',
@@ -200,7 +200,16 @@ async function acceptProposal(proposalId: string) {
       })
       .eq('id', proposalId)
 
-    if (error) throw error
+    if (proposalError) throw proposalError
+
+    if (quote.value) {
+      const { error: quoteError } = await supabase
+        .from('quote_requests')
+        .update({ status: 'ACCEPTED' })
+        .eq('id', quote.value.id)
+
+      if (quoteError) throw quoteError
+    }
 
     await loadQuoteDetail()
     alert('Proposition acceptée !')
