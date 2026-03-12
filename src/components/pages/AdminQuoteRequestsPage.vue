@@ -25,10 +25,40 @@ interface QuoteRequest {
   target_company?: any
 }
 
+interface QuoteClarification {
+  id: string
+  quote_request_id: string
+  asked_by: string
+  question: string
+  answer: string | null
+  created_at: string
+  answered_at: string | null
+}
+
+interface QuoteProposal {
+  id: string
+  quote_request_id: string
+  producer_company_id: string
+  proposed_amount: number | null
+  price_min: number | null
+  price_max: number | null
+  proposal_message: string | null
+  delivery_time: string | null
+  status: string
+  created_at: string
+  accepted_at: string | null
+  rejected_at: string | null
+  rejection_reason: string | null
+  company?: any
+}
+
 const quotes = ref<QuoteRequest[]>([])
 const loading = ref(true)
 const actionLoading = ref(false)
 const selectedQuote = ref<QuoteRequest | null>(null)
+const clarifications = ref<QuoteClarification[]>([])
+const proposals = ref<QuoteProposal[]>([])
+const loadingDetails = ref(false)
 const showDetailsModal = ref(false)
 const showRejectModal = ref(false)
 const rejectionReason = ref('')
@@ -76,9 +106,41 @@ async function loadQuotes() {
   }
 }
 
-function viewDetails(quote: QuoteRequest) {
+async function viewDetails(quote: QuoteRequest) {
   selectedQuote.value = quote
   showDetailsModal.value = true
+  loadingDetails.value = true
+  clarifications.value = []
+  proposals.value = []
+
+  try {
+    const [clarificationsRes, proposalsRes] = await Promise.all([
+      supabase
+        .from('quote_clarifications')
+        .select('*')
+        .eq('quote_request_id', quote.id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('quote_proposals')
+        .select(`
+          *,
+          company:companies!quote_proposals_producer_company_id_fkey(id, name, city)
+        `)
+        .eq('quote_request_id', quote.id)
+        .order('created_at', { ascending: false })
+    ])
+
+    if (clarificationsRes.error) throw clarificationsRes.error
+    if (proposalsRes.error) throw proposalsRes.error
+
+    clarifications.value = clarificationsRes.data || []
+    proposals.value = proposalsRes.data || []
+  } catch (error) {
+    console.error('Error loading quote details:', error)
+    showMessage('error', 'Erreur lors du chargement des détails')
+  } finally {
+    loadingDetails.value = false
+  }
 }
 
 function openRejectModal(quote: QuoteRequest) {
@@ -289,59 +351,169 @@ function getStatusBadge(quote: QuoteRequest) {
       </div>
 
       <div v-if="showDetailsModal && selectedQuote" class="modal-overlay" @click="showDetailsModal = false">
-        <div class="modal" @click.stop>
+        <div class="modal modal-large" @click.stop>
           <div class="modal-header">
             <h2>Détails de la demande</h2>
             <button @click="showDetailsModal = false" class="modal-close">✕</button>
           </div>
           <div class="modal-body">
-            <div class="detail-row">
-              <span class="detail-label">Titre:</span>
-              <span class="detail-value">{{ selectedQuote.title }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Description:</span>
-              <span class="detail-value">{{ selectedQuote.description || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Demandeur:</span>
-              <span class="detail-value">
-                {{ selectedQuote.requester?.first_name || 'Anonyme' }}
-                {{ selectedQuote.requester?.last_name || '' }}
-                ({{ selectedQuote.requester_type === 'PARTICULIER' ? 'Particulier' : 'Pro' }})
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Entreprise cible:</span>
-              <span class="detail-value">{{ selectedQuote.target_company?.name || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Localisation:</span>
-              <span class="detail-value">{{ selectedQuote.location || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Volume estimé:</span>
-              <span class="detail-value">{{ selectedQuote.volume_estimated || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Fréquence:</span>
-              <span class="detail-value">{{ selectedQuote.frequency || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Budget:</span>
-              <span class="detail-value">{{ selectedQuote.budget_range || 'N/A' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Statut:</span>
-              <span class="detail-value">
-                <span class="status-badge" :class="getStatusBadge(selectedQuote).class">
-                  {{ getStatusBadge(selectedQuote).label }}
+            <div class="detail-section">
+              <h3 class="section-title">Informations générales</h3>
+              <div class="detail-row">
+                <span class="detail-label">Titre:</span>
+                <span class="detail-value">{{ selectedQuote.title }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Description:</span>
+                <span class="detail-value">{{ selectedQuote.description || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Demandeur:</span>
+                <span class="detail-value">
+                  {{ selectedQuote.requester?.first_name || 'Anonyme' }}
+                  {{ selectedQuote.requester?.last_name || '' }}
+                  ({{ selectedQuote.requester_type === 'PARTICULIER' ? 'Particulier' : 'Pro' }})
                 </span>
-              </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Entreprise cible:</span>
+                <span class="detail-value">{{ selectedQuote.target_company?.name || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Localisation:</span>
+                <span class="detail-value">{{ selectedQuote.location || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Volume estimé:</span>
+                <span class="detail-value">{{ selectedQuote.volume_estimated || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Fréquence:</span>
+                <span class="detail-value">{{ selectedQuote.frequency || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Budget:</span>
+                <span class="detail-value">{{ selectedQuote.budget_range || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Statut:</span>
+                <span class="detail-value">
+                  <span class="status-badge" :class="getStatusBadge(selectedQuote).class">
+                    {{ getStatusBadge(selectedQuote).label }}
+                  </span>
+                </span>
+              </div>
+              <div v-if="selectedQuote.admin_rejection_reason" class="detail-row">
+                <span class="detail-label">Raison du rejet:</span>
+                <span class="detail-value rejection-reason">{{ selectedQuote.admin_rejection_reason }}</span>
+              </div>
             </div>
-            <div v-if="selectedQuote.admin_rejection_reason" class="detail-row">
-              <span class="detail-label">Raison du rejet:</span>
-              <span class="detail-value rejection-reason">{{ selectedQuote.admin_rejection_reason }}</span>
+
+            <div v-if="loadingDetails" class="detail-section">
+              <div class="loading-inline">
+                <div class="spinner-small"></div>
+                <p>Chargement des détails...</p>
+              </div>
+            </div>
+
+            <div v-if="!loadingDetails && clarifications.length > 0" class="detail-section">
+              <h3 class="section-title">Demandes de clarification ({{ clarifications.length }})</h3>
+              <div class="clarifications-list">
+                <div v-for="clarification in clarifications" :key="clarification.id" class="clarification-item">
+                  <div class="clarification-question">
+                    <strong>Question:</strong>
+                    <p>{{ clarification.question }}</p>
+                    <span class="clarification-date">
+                      {{ new Date(clarification.created_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) }}
+                    </span>
+                  </div>
+                  <div v-if="clarification.answer" class="clarification-answer">
+                    <strong>Réponse:</strong>
+                    <p>{{ clarification.answer }}</p>
+                    <span class="clarification-date">
+                      {{ new Date(clarification.answered_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) }}
+                    </span>
+                  </div>
+                  <div v-else class="clarification-pending">
+                    En attente de réponse
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="!loadingDetails && proposals.length > 0" class="detail-section">
+              <h3 class="section-title">Propositions ({{ proposals.length }})</h3>
+              <div class="proposals-list">
+                <div v-for="proposal in proposals" :key="proposal.id" class="proposal-item" :class="proposal.status.toLowerCase()">
+                  <div class="proposal-header">
+                    <div class="proposal-company">
+                      <strong>{{ proposal.company?.name || 'Entreprise inconnue' }}</strong>
+                      <span v-if="proposal.company?.city" class="company-location">{{ proposal.company.city }}</span>
+                    </div>
+                    <span class="proposal-status-badge" :class="proposal.status.toLowerCase()">
+                      {{ proposal.status === 'PENDING' ? 'En attente' : proposal.status === 'ACCEPTED' ? 'Acceptée' : 'Rejetée' }}
+                    </span>
+                  </div>
+
+                  <div class="proposal-details">
+                    <div v-if="proposal.proposed_amount" class="proposal-detail-item">
+                      <span class="proposal-label">Montant proposé:</span>
+                      <span class="proposal-value">{{ proposal.proposed_amount }} €</span>
+                    </div>
+                    <div v-if="proposal.price_min && proposal.price_max" class="proposal-detail-item">
+                      <span class="proposal-label">Fourchette de prix:</span>
+                      <span class="proposal-value">{{ proposal.price_min }} € - {{ proposal.price_max }} €</span>
+                    </div>
+                    <div v-if="proposal.delivery_time" class="proposal-detail-item">
+                      <span class="proposal-label">Délai d'intervention:</span>
+                      <span class="proposal-value">{{ proposal.delivery_time }}</span>
+                    </div>
+                    <div v-if="proposal.proposal_message" class="proposal-message">
+                      <strong>Message:</strong>
+                      <p>{{ proposal.proposal_message }}</p>
+                    </div>
+                    <div v-if="proposal.status === 'REJECTED' && proposal.rejection_reason" class="proposal-rejection">
+                      <strong>Raison du rejet:</strong>
+                      <p>{{ proposal.rejection_reason }}</p>
+                    </div>
+                  </div>
+
+                  <div class="proposal-footer">
+                    <span class="proposal-date">
+                      Créée le {{ new Date(proposal.created_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) }}
+                    </span>
+                    <span v-if="proposal.accepted_at" class="proposal-accepted-date">
+                      Acceptée le {{ new Date(proposal.accepted_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      }) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="!loadingDetails && clarifications.length === 0 && proposals.length === 0" class="detail-section">
+              <p class="no-activity">Aucune activité pour cette demande de devis</p>
             </div>
           </div>
           <div class="modal-footer">
@@ -742,6 +914,10 @@ function getStatusBadge(quote: QuoteRequest) {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+.modal-large {
+  max-width: 900px;
+}
+
 .modal-header {
   padding: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
@@ -874,5 +1050,247 @@ function getStatusBadge(quote: QuoteRequest) {
   .modal-footer button {
     width: 100%;
   }
+}
+
+.detail-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.clarifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.clarification-item {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 3px solid #3b82f6;
+}
+
+.clarification-question,
+.clarification-answer {
+  margin-bottom: 0.75rem;
+}
+
+.clarification-question strong,
+.clarification-answer strong {
+  display: block;
+  color: #374151;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.clarification-question p,
+.clarification-answer p {
+  margin: 0.5rem 0;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+
+.clarification-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.clarification-answer {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.clarification-pending {
+  color: #f59e0b;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.proposals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.proposal-item {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1.25rem;
+  border-left: 4px solid #e5e7eb;
+}
+
+.proposal-item.pending {
+  border-left-color: #f59e0b;
+}
+
+.proposal-item.accepted {
+  border-left-color: #10b981;
+  background: #f0fdf4;
+}
+
+.proposal-item.rejected {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.proposal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.proposal-company {
+  flex: 1;
+}
+
+.proposal-company strong {
+  display: block;
+  font-size: 1rem;
+  color: #1a1a1a;
+  margin-bottom: 0.25rem;
+}
+
+.company-location {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.proposal-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.proposal-status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.proposal-status-badge.accepted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.proposal-status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.proposal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.proposal-detail-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.proposal-label {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 150px;
+}
+
+.proposal-value {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.proposal-message,
+.proposal-rejection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.proposal-message strong,
+.proposal-rejection strong {
+  display: block;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.proposal-message p,
+.proposal-rejection p {
+  margin: 0;
+  color: #1a1a1a;
+  line-height: 1.5;
+  font-size: 0.875rem;
+}
+
+.proposal-rejection p {
+  color: #dc2626;
+  font-style: italic;
+}
+
+.proposal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.proposal-date,
+.proposal-accepted-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.proposal-accepted-date {
+  color: #059669;
+  font-weight: 500;
+}
+
+.no-activity {
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+  padding: 2rem;
 }
 </style>
