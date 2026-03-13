@@ -47,8 +47,7 @@ onMounted(() => {
   <nav class="navbar">
     <div class="nav-container">
       <router-link to="/" class="nav-brand">
-        <span class="logo-icon">🏪</span>
-        <span class="logo-text">LocalLink</span>
+        <span class="logo-text">Porte à <span class="logo-pro">Pro</span></span>
       </router-link>
 
       <div class="nav-links" :class="{ 'mobile-open': mobileMenuOpen }">
@@ -116,10 +115,15 @@ onMounted(() => {
   font-size: 24px;
   color: #111827;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.logo-icon {
-  font-size: 28px;
+.logo-text {
+  color: #111827;
+}
+
+.logo-pro {
+  color: #ea580c;
 }
 
 .nav-links {
@@ -139,7 +143,7 @@ onMounted(() => {
 }
 
 .nav-link:hover {
-  color: #059669;
+  color: #ea580c;
 }
 
 .nav-actions {
@@ -182,14 +186,14 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #059669;
+  background: #ea580c;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #047857;
+  background: #dc2626;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
 }
 
 .mobile-menu-btn {
