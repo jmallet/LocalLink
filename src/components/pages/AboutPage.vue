@@ -8,10 +8,10 @@ const router = useRouter()
   <div class="about-page">
     <section class="hero">
       <div class="container">
-        <h1 class="hero-title">À propos de LocalLink</h1>
+        <h1 class="hero-title">À propos de Porte à Pro</h1>
         <p class="hero-subtitle">
-          Nous connectons les entreprises locales pour favoriser le circuit court
-          et dynamiser l'économie régionale
+          Nous mettons en relation particuliers et professionnels locaux
+          pour un service de proximité et de qualité
         </p>
       </div>
     </section>
@@ -22,24 +22,24 @@ const router = useRouter()
           <div class="mission-text">
             <h2 class="section-title">Notre mission</h2>
             <p>
-              LocalLink est née d'un constat simple : trop d'entreprises cherchent des fournisseurs
-              à l'autre bout du pays alors que des producteurs de qualité existent à proximité.
+              Porte à Pro est née d'un constat simple : trouver le bon professionnel près de chez soi
+              peut être compliqué et chronophage. Nous simplifions cette recherche.
             </p>
             <p>
-              Notre plateforme facilite la mise en relation entre entreprises locales, permettant
-              aux acheteurs de trouver rapidement des producteurs et fournisseurs de confiance,
-              tout en aidant les producteurs à développer leur clientèle B2B.
+              Notre plateforme met en relation particuliers et professionnels locaux vérifiés.
+              Déposez votre demande en 2 minutes et recevez des devis de pros qualifiés de votre quartier,
+              ou parcourez directement notre annuaire pour trouver le professionnel qu'il vous faut.
             </p>
             <p>
-              En favorisant les échanges locaux, nous contribuons à réduire l'empreinte carbone
-              du transport, à créer de l'emploi dans les territoires et à tisser des liens durables
-              entre acteurs économiques d'une même région.
+              En favorisant les échanges de proximité, nous contribuons à dynamiser l'économie locale,
+              créer de l'emploi dans les territoires et tisser des liens durables entre habitants
+              et professionnels d'un même quartier.
             </p>
           </div>
           <div class="mission-image">
             <img
               src="https://images.pexels.com/photos/3184398/pexels-photo-3184398.jpeg"
-              alt="Équipe LocalLink"
+              alt="Équipe Porte à Pro"
             />
           </div>
         </div>
@@ -97,37 +97,37 @@ const router = useRouter()
         <div class="steps-grid">
           <div class="step">
             <div class="step-number">1</div>
-            <h3>Créez votre compte</h3>
+            <h3>Déposez votre demande</h3>
             <p>
-              Inscrivez votre entreprise gratuitement avec votre SIRET.
-              Nous vérifions toutes les inscriptions.
+              En 2 minutes, décrivez votre besoin et recevez des devis
+              de professionnels locaux vérifiés.
             </p>
           </div>
 
           <div class="step">
             <div class="step-number">2</div>
-            <h3>Découvrez les pros locaux</h3>
+            <h3>Parcourez l'annuaire</h3>
             <p>
-              Parcourez les producteurs et fournisseurs de votre région.
+              Explorez notre annuaire de professionnels du quartier.
               Filtrez par catégorie et localisation.
             </p>
           </div>
 
           <div class="step">
             <div class="step-number">3</div>
-            <h3>Envoyez vos demandes</h3>
+            <h3>Comparez les devis</h3>
             <p>
-              Contactez directement les entreprises qui vous intéressent.
-              Recevez des devis personnalisés.
+              Recevez plusieurs propositions et choisissez le professionnel
+              qui correspond le mieux à vos besoins.
             </p>
           </div>
 
           <div class="step">
             <div class="step-number">4</div>
-            <h3>Développez votre réseau</h3>
+            <h3>Profitez du service</h3>
             <p>
-              Construisez des relations durables avec vos partenaires locaux.
-              Profitez d'un service de qualité.
+              Bénéficiez d'un service de proximité et de qualité.
+              Faites appel aux meilleurs pros de votre quartier.
             </p>
           </div>
         </div>
@@ -138,20 +138,20 @@ const router = useRouter()
       <div class="container">
         <div class="stats-grid">
           <div class="stat">
-            <div class="stat-number">8</div>
-            <div class="stat-label">Entreprises partenaires</div>
+            <div class="stat-number">340</div>
+            <div class="stat-label">Pros locaux actifs</div>
           </div>
           <div class="stat">
-            <div class="stat-number">3</div>
-            <div class="stat-label">Régions couvertes</div>
+            <div class="stat-number">1240</div>
+            <div class="stat-label">Demandes ce mois</div>
           </div>
           <div class="stat">
-            <div class="stat-number">14</div>
-            <div class="stat-label">Produits & services</div>
+            <div class="stat-number">4.8★</div>
+            <div class="stat-label">Satisfaction moyenne</div>
           </div>
           <div class="stat">
             <div class="stat-number">100%</div>
-            <div class="stat-label">Entreprises vérifiées</div>
+            <div class="stat-label">Professionnels vérifiés</div>
           </div>
         </div>
       </div>
@@ -160,10 +160,10 @@ const router = useRouter()
     <section class="cta">
       <div class="container">
         <div class="cta-card">
-          <h2>Prêt à rejoindre LocalLink ?</h2>
+          <h2>Prêt à rejoindre Porte à Pro ?</h2>
           <p>
-            Inscrivez votre entreprise gratuitement et commencez à développer
-            votre réseau local dès aujourd'hui.
+            Trouvez le bon professionnel près de chez vous ou développez votre activité
+            en tant que pro local. Rejoignez-nous gratuitement.
           </p>
           <button class="btn-cta" @click="router.push({ name: 'login' })">
             Créer mon compte gratuitement
@@ -181,7 +181,7 @@ const router = useRouter()
 }
 
 .hero {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
   color: white;
   padding: 80px 24px;
   text-align: center;
@@ -319,7 +319,7 @@ const router = useRouter()
 .step-number {
   width: 64px;
   height: 64px;
-  background: #059669;
+  background: #ea580c;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -346,7 +346,7 @@ const router = useRouter()
 
 .stats {
   padding: 80px 24px;
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
   color: white;
 }
 
@@ -402,7 +402,7 @@ const router = useRouter()
 
 .btn-cta {
   padding: 16px 32px;
-  background: #059669;
+  background: #ea580c;
   color: white;
   border: none;
   border-radius: 12px;
@@ -413,9 +413,9 @@ const router = useRouter()
 }
 
 .btn-cta:hover {
-  background: #047857;
+  background: #dc2626;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.3);
 }
 
 @media (max-width: 768px) {

@@ -49,9 +49,9 @@ function formatDate(dateString: string) {
   <div class="blog-page">
     <section class="page-header">
       <div class="container">
-        <h1 class="page-title">Blog LocalLink</h1>
+        <h1 class="page-title">Blog Porte à Pro</h1>
         <p class="page-subtitle">
-          Actualités, conseils et ressources pour développer votre réseau B2B local
+          Actualités, conseils et astuces pour trouver les meilleurs professionnels près de chez vous
         </p>
       </div>
     </section>

@@ -11,12 +11,11 @@ const currentYear = new Date().getFullYear()
       <div class="footer-grid">
         <div class="footer-section">
           <div class="footer-brand">
-            <span class="logo-icon">🏪</span>
-            <span class="logo-text">LocalLink</span>
+            <span class="logo-text">Porte à <span class="logo-pro">Pro</span></span>
           </div>
           <p class="footer-description">
-            La plateforme qui connecte les entreprises locales pour favoriser
-            le circuit court et l'économie régionale.
+            Le pro du quartier, à votre porte. Trouvez le bon professionnel
+            près de chez vous en 2 minutes.
           </p>
         </div>
 
@@ -57,7 +56,7 @@ const currentYear = new Date().getFullYear()
       <div class="footer-content">
         <div class="footer-bottom-content">
           <p class="copyright">
-            © {{ currentYear }} LocalLink. Tous droits réservés.
+            © {{ currentYear }} Porte à Pro. Tous droits réservés.
           </p>
           <div class="social-links">
             <a href="#" class="social-link" aria-label="LinkedIn">in</a>
@@ -105,8 +104,12 @@ const currentYear = new Date().getFullYear()
   margin-bottom: 8px;
 }
 
-.logo-icon {
-  font-size: 28px;
+.logo-text {
+  color: #e5e7eb;
+}
+
+.logo-pro {
+  color: #ea580c;
 }
 
 .footer-description {
@@ -142,7 +145,7 @@ const currentYear = new Date().getFullYear()
 }
 
 .footer-links a:hover {
-  color: #059669;
+  color: #ea580c;
 }
 
 .footer-bottom {
@@ -183,7 +186,7 @@ const currentYear = new Date().getFullYear()
 }
 
 .social-link:hover {
-  background: #059669;
+  background: #ea580c;
   color: white;
 }
 

@@ -77,7 +77,7 @@ async function loadDashboardData() {
 
       <div v-else-if="!company" class="empty-state">
         <span class="empty-icon">🏢</span>
-        <h2>Bienvenue sur LocalLink !</h2>
+        <h2>Bienvenue sur Porte à Pro !</h2>
         <p>Vous n'avez pas encore de profil entreprise.</p>
         <button class="btn-primary" @click="router.push({ name: 'dashboard-profile' })">
           Créer mon profil
