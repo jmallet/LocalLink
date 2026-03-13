@@ -1,76 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '../../lib/supabase'
 import { isAuthenticated } from '../../stores/auth'
-import type { Company } from '../../types/database'
-import CompanyCard from '../common/CompanyCard.vue'
 
 const router = useRouter()
 
-const featuredCompanies = ref<Company[]>([])
-const otherCompanies = ref<Company[]>([])
-const loading = ref(true)
-const showLoginModal = ref(false)
-const selectedCompany = ref<Company | null>(null)
-
-const displayedOtherCompanies = computed(() => {
+function navigateToRequestQuote() {
   if (isAuthenticated.value) {
-    return otherCompanies.value
-  }
-  return otherCompanies.value.slice(0, 3)
-})
-
-onMounted(async () => {
-  await loadCompanies()
-})
-
-async function loadCompanies() {
-  loading.value = true
-  try {
-    const { data: producerProfiles, error } = await supabase
-      .from('producer_profiles')
-      .select('company_id, companies(*)')
-      .eq('is_active', true)
-
-    if (error) {
-      console.error('Error loading companies:', error)
-      throw error
-    }
-
-    if (producerProfiles) {
-      const companies = producerProfiles
-        .map(p => p.companies)
-        .filter(c => c !== null)
-
-      featuredCompanies.value = []
-      otherCompanies.value = companies.slice(0, 9)
-    }
-  } catch (error) {
-    console.error('Error loading companies:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleCompanyClick(company: Company) {
-  router.push({ name: 'company-detail', params: { id: company.id } })
-}
-
-function handleContact(company: Company) {
-  if (!isAuthenticated.value) {
-    selectedCompany.value = company
-    showLoginModal.value = true
+    router.push({ name: 'individual-new-quote' })
   } else {
-    router.push({ name: 'company-detail', params: { id: company.id } })
+    router.push({ name: 'login' })
   }
 }
 
-function handleViewMore() {
-  if (!isAuthenticated.value) {
-    showLoginModal.value = true
+function navigateToFindPro() {
+  router.push({ name: 'pros-locaux' })
+}
+
+function navigateToProSpace() {
+  if (isAuthenticated.value) {
+    router.push({ name: 'dashboard-pro' })
   } else {
-    router.push({ name: 'pros-locaux' })
+    router.push({ name: 'login' })
   }
 }
 </script>
@@ -79,349 +29,398 @@ function handleViewMore() {
   <div class="home-page">
     <section class="hero">
       <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-icon">🏠</span>
+          Le pro du quartier, à votre porte
+        </div>
+
         <h1 class="hero-title">
-          Connectez-vous avec des<br />
-          <span class="highlight">professionnels locaux</span>
+          Trouvez le bon
+          <span class="highlight">professionnel</span>
+          près de chez vous
         </h1>
+
         <p class="hero-subtitle">
-          LocalLink facilite la mise en relation entre entreprises pour favoriser
-          le circuit court et l'économie locale.
+          Déposez votre demande en 2 minutes et recevez des devis<br />
+          de professionnels locaux vérifiés.
         </p>
+
         <div class="hero-actions">
-          <button class="btn-primary-large" @click="router.push({ name: 'pros-locaux' })">
-            Découvrir les pros locaux
+          <button class="btn-primary-hero" @click="navigateToRequestQuote">
+            <span class="btn-icon">📝</span>
+            Déposer une demande
           </button>
-          <button v-if="!isAuthenticated" class="btn-secondary-large" @click="router.push({ name: 'login' })">
-            Créer mon compte
+          <button class="btn-secondary-hero" @click="navigateToFindPro">
+            <span class="btn-icon">🔍</span>
+            Trouver un pro →
           </button>
         </div>
       </div>
-      <div class="hero-image">
-        <img src="https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg" alt="Professionnels locaux" />
+    </section>
+
+    <section class="stats">
+      <div class="container-stats">
+        <div class="stat-item">
+          <div class="stat-number">1240</div>
+          <div class="stat-label">Demandes ce mois</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-number">340</div>
+          <div class="stat-label">Pros locaux actifs</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-number">4.8★</div>
+          <div class="stat-label">Satisfaction moyenne</div>
+        </div>
       </div>
     </section>
 
-    <section class="features">
+    <section class="user-types">
       <div class="container">
-        <div class="features-grid">
-          <div class="feature-item">
-            <span class="feature-icon">🤝</span>
-            <h3>Mise en relation directe</h3>
-            <p>Connectez-vous facilement avec des producteurs et fournisseurs locaux vérifiés.</p>
+        <div class="user-type-card particulier">
+          <div class="card-icon">🏡</div>
+          <h2 class="card-title">Particulier</h2>
+          <p class="card-description">
+            Déposez une demande et recevez des devis, ou parcourez directement l'annuaire des pros.
+          </p>
+          <div class="card-actions">
+            <button class="btn-card-primary" @click="navigateToRequestQuote">
+              <span class="btn-icon">📝</span>
+              Déposer une demande
+            </button>
+            <button class="btn-card-secondary" @click="navigateToFindPro">
+              <span class="btn-icon">🔍</span>
+              Trouver un pro
+            </button>
           </div>
-          <div class="feature-item">
-            <span class="feature-icon">📋</span>
-            <h3>Demandes de devis</h3>
-            <p>Envoyez vos demandes à plusieurs professionnels en quelques clics.</p>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">✅</span>
-            <h3>Entreprises vérifiées</h3>
-            <p>Toutes les entreprises sont vérifiées et certifiées par nos soins.</p>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">🌱</span>
-            <h3>Circuit court</h3>
-            <p>Soutenez l'économie locale et réduisez votre empreinte carbone.</p>
+        </div>
+
+        <div class="user-type-card professionnel">
+          <div class="card-icon">🔧</div>
+          <h2 class="card-title">Professionnel</h2>
+          <p class="card-description">
+            Accédez aux demandes de clients locaux et développez votre activité avec des leads qualifiés.
+          </p>
+          <div class="card-actions">
+            <button class="btn-card-pro" @click="navigateToProSpace">
+              Espace pro →
+            </button>
           </div>
         </div>
       </div>
     </section>
-
-    <section v-if="!loading && featuredCompanies.length > 0" class="featured-companies">
-      <div class="container">
-        <h2 class="section-title">Pros locaux mis en avant</h2>
-        <p class="section-subtitle">Ils ont choisi d'augmenter leur visibilité</p>
-
-        <div class="companies-grid">
-          <CompanyCard
-            v-for="company in featuredCompanies"
-            :key="company.id"
-            :company="company"
-            :featured="true"
-            @click="handleCompanyClick(company)"
-            @contact="handleContact(company)"
-          />
-        </div>
-      </div>
-    </section>
-
-    <section v-if="!loading" class="other-companies">
-      <div class="container">
-        <h2 class="section-title">Découvrez d'autres pros locaux</h2>
-
-        <div class="companies-grid">
-          <CompanyCard
-            v-for="company in displayedOtherCompanies"
-            :key="company.id"
-            :company="company"
-            @click="handleCompanyClick(company)"
-            @contact="handleContact(company)"
-          />
-        </div>
-
-        <div v-if="!isAuthenticated && otherCompanies.length > 3" class="view-more-container">
-          <button class="btn-view-more" @click="handleViewMore">
-            Voir plus de professionnels
-          </button>
-          <p class="login-hint">Inscrivez-vous pour accéder à tous les professionnels</p>
-        </div>
-
-        <div v-else-if="isAuthenticated" class="view-more-container">
-          <button class="btn-view-more" @click="router.push({ name: 'pros-locaux' })">
-            Voir tous les professionnels
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <div v-if="loading" class="loading-container">
-      <div class="spinner"></div>
-      <p>Chargement des entreprises...</p>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: #f9fafb;
+  background: linear-gradient(180deg, #1a1a1a 0%, #2d2520 100%);
 }
 
 .hero {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  color: white;
-  padding: 80px 24px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 100px 24px 80px;
+  text-align: center;
 }
 
 .hero-content {
-  max-width: 600px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #fb923c;
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 32px;
+}
+
+.badge-icon {
+  font-size: 16px;
 }
 
 .hero-title {
-  font-size: 56px;
+  font-size: 72px;
   font-weight: 800;
   line-height: 1.1;
-  margin: 0 0 24px 0;
+  margin: 0 0 32px 0;
+  color: white;
 }
 
-.highlight {
-  color: #fbbf24;
+.hero-title .highlight {
+  color: #fb923c;
 }
 
 .hero-subtitle {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.6;
-  margin: 0 0 32px 0;
-  opacity: 0.95;
+  margin: 0 0 48px 0;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .hero-actions {
   display: flex;
   gap: 16px;
+  justify-content: center;
   flex-wrap: wrap;
 }
 
-.btn-primary-large,
-.btn-secondary-large {
-  padding: 16px 32px;
+.btn-primary-hero,
+.btn-secondary-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 28px;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 16px;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-primary-large {
-  background: white;
-  color: #059669;
-}
-
-.btn-primary-large:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.3);
-}
-
-.btn-secondary-large {
-  background: transparent;
+.btn-primary-hero {
+  background: #ea580c;
   color: white;
-  border: 2px solid white;
 }
 
-.btn-secondary-large:hover {
+.btn-primary-hero:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.3);
+}
+
+.btn-secondary-hero {
   background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.hero-image {
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+.btn-secondary-hero:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
-.hero-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.btn-icon {
+  font-size: 18px;
 }
 
-.features {
-  padding: 80px 24px;
+.stats {
   background: white;
+  padding: 48px 24px;
+}
+
+.container-stats {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 48px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ea580c;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 60px;
+  background: #e5e7eb;
+}
+
+.user-types {
+  padding: 80px 24px;
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-}
-
-.features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 32px;
 }
 
-.feature-item {
-  text-align: center;
+.user-type-card {
+  background: white;
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
 }
 
-.feature-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 16px;
+.user-type-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
-.feature-item h3 {
-  font-size: 20px;
-  font-weight: 700;
+.card-icon {
+  width: 64px;
+  height: 64px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 24px;
+}
+
+.particulier .card-icon {
+  background: rgba(234, 88, 12, 0.1);
+}
+
+.professionnel .card-icon {
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.card-title {
+  font-size: 28px;
+  font-weight: 800;
   color: #111827;
-  margin: 0 0 8px 0;
+  margin: 0 0 16px 0;
 }
 
-.feature-item p {
+.card-description {
   font-size: 15px;
   color: #6b7280;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 0 32px 0;
 }
 
-.featured-companies,
-.other-companies {
-  padding: 80px 24px;
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.section-title {
-  font-size: 36px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0 0 12px 0;
-  text-align: center;
-}
-
-.section-subtitle {
-  font-size: 18px;
-  color: #6b7280;
-  margin: 0 0 48px 0;
-  text-align: center;
-}
-
-.companies-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 24px;
-  margin-bottom: 48px;
-}
-
-.view-more-container {
-  text-align: center;
-}
-
-.btn-view-more {
-  padding: 14px 32px;
-  background: #059669;
-  color: white;
+.btn-card-primary,
+.btn-card-secondary,
+.btn-card-pro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
   border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-view-more:hover {
-  background: #047857;
+.btn-card-primary {
+  background: #ea580c;
+  color: white;
+}
+
+.btn-card-primary:hover {
+  background: #dc2626;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.3);
 }
 
-.login-hint {
-  margin-top: 16px;
-  color: #6b7280;
-  font-size: 14px;
+.btn-card-secondary {
+  background: transparent;
+  color: #374151;
+  border: 2px solid #e5e7eb;
 }
 
-.loading-container {
-  text-align: center;
-  padding: 80px 24px;
+.btn-card-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #059669;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
+.btn-card-pro {
+  background: #f97316;
+  color: white;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.btn-card-pro:hover {
+  background: #ea580c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.3);
 }
 
 @media (max-width: 1024px) {
-  .hero {
-    grid-template-columns: 1fr;
-    padding: 60px 24px;
-    gap: 40px;
-  }
-
   .hero-title {
-    font-size: 42px;
+    font-size: 56px;
   }
 
-  .hero-image {
-    height: 300px;
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .container-stats {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .stat-divider {
+    width: 100px;
+    height: 1px;
   }
 }
 
 @media (max-width: 768px) {
+  .hero {
+    padding: 60px 16px 48px;
+  }
+
   .hero-title {
-    font-size: 36px;
+    font-size: 40px;
   }
 
   .hero-subtitle {
-    font-size: 18px;
+    font-size: 16px;
   }
 
-  .companies-grid {
-    grid-template-columns: 1fr;
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
   }
 
-  .section-title {
-    font-size: 28px;
+  .btn-primary-hero,
+  .btn-secondary-hero {
+    width: 100%;
+    justify-content: center;
   }
 
-  .features,
-  .featured-companies,
-  .other-companies {
-    padding: 48px 16px;
+  .user-type-card {
+    padding: 32px 24px;
+  }
+
+  .card-title {
+    font-size: 24px;
+  }
+
+  .stat-number {
+    font-size: 36px;
   }
 }
 </style>
