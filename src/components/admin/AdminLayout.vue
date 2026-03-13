@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { isAuthenticated, user, signOut, isAdmin as isUserAdmin, loading as authLoading } from '../../stores/auth'
 
@@ -10,12 +10,29 @@ const currentPage = ref('dashboard')
 const loading = ref(true)
 
 const menuItems = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: '📊', isInternal: true },
-  { id: 'users', label: 'Utilisateurs', icon: '👥', isInternal: true },
-  { id: 'companies', label: 'Sociétés', icon: '🏢', isInternal: true },
-  { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis' },
-  { name: 'admin-quotes-monitoring', label: 'Suivi des devis', icon: '📈', path: '/admin/suivi-devis' }
+  { id: 'dashboard', label: 'Tableau de bord', icon: '📊', isInternal: true, badge: null },
+  { id: 'users', label: 'Utilisateurs', icon: '👥', isInternal: true, badge: null },
+  { id: 'companies', label: 'Sociétés', icon: '🏢', isInternal: true, badge: null },
+  { name: 'admin-quote-requests', label: 'Gestion des devis', icon: '✅', path: '/admin/demandes-devis', badge: null },
+  { name: 'admin-quotes-monitoring', label: 'Suivi des devis', icon: '📈', path: '/admin/suivi-devis', badge: null }
 ]
+
+const userInitials = computed(() => {
+  const email = user.value?.email || ''
+  const parts = email.split('@')[0].split('.')
+  if (parts.length > 1) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return email.substring(0, 2).toUpperCase()
+})
+
+const userName = computed(() => {
+  const email = user.value?.email || ''
+  const name = email.split('@')[0]
+  return name.split('.').map(part =>
+    part.charAt(0).toUpperCase() + part.slice(1)
+  ).join(' ')
+})
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
@@ -66,12 +83,16 @@ async function handleSignOut() {
   <div v-else-if="isUserAdmin" class="admin-layout">
     <aside class="admin-sidebar">
       <div class="sidebar-header">
-        <router-link to="/" class="brand">
-          <div class="brand-text">
-            <h1>Porte à <span class="brand-pro">Pro</span></h1>
-            <span class="badge-admin">Admin</span>
-          </div>
-        </router-link>
+        <div class="user-avatar">{{ userInitials }}</div>
+        <h2 class="user-name">{{ userName }}</h2>
+        <div class="user-role">
+          <svg class="role-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          Administrateur
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -84,6 +105,7 @@ async function handleSignOut() {
           >
             <span class="nav-icon">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
+            <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
           </router-link>
           <button
             v-else
@@ -93,18 +115,12 @@ async function handleSignOut() {
           >
             <span class="nav-icon">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
+            <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
           </button>
         </template>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="user-avatar">{{ user?.email?.charAt(0).toUpperCase() }}</div>
-          <div class="user-details">
-            <span class="user-email">{{ user?.email }}</span>
-            <span class="user-role">Administrateur</span>
-          </div>
-        </div>
         <button class="btn-logout" @click="handleSignOut">
           Déconnexion
         </button>
@@ -150,61 +166,66 @@ async function handleSignOut() {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: 100vh;
-  background: #f9fafb;
+  background: #f5f5f5;
 }
 
 .admin-sidebar {
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #1a1d2e 0%, #0f1117 100%);
   display: flex;
   flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
+  border-radius: 0 16px 16px 0;
 }
 
 .sidebar-header {
-  padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.brand {
+.user-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
   display: flex;
   align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.brand:hover {
-  opacity: 0.8;
-}
-
-.brand-text h1 {
-  font-size: 20px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0 0 4px 0;
-}
-
-.brand-pro {
-  color: #ea580c;
-}
-
-.badge-admin {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #dbeafe;
-  color: #1e40af;
-  border-radius: 4px;
-  font-size: 11px;
+  justify-content: center;
   font-weight: 700;
-  text-transform: uppercase;
+  font-size: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.user-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.user-role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.role-icon {
+  opacity: 0.7;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 16px;
+  padding: 24px 16px;
   overflow-y: auto;
 }
 
@@ -220,29 +241,47 @@ async function handleSignOut() {
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #9ca3af;
+  position: relative;
+  border-left: 3px solid transparent;
 }
 
 .nav-item:hover {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
 }
 
 .nav-item.active {
-  background: #eff6ff;
-  color: #1e40af;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-weight: 500;
+  border-left-color: #3b82f6;
 }
 
 .nav-icon {
-  font-size: 20px;
+  font-size: 18px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  flex: 1;
+  font-size: 15px;
 }
 
-.nav-item.active .nav-label {
-  color: #1e40af;
+.nav-badge {
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
 }
 
 .nav-link {
@@ -250,74 +289,27 @@ async function handleSignOut() {
   color: inherit;
 }
 
-.nav-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 12px 0;
-}
-
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #3b82f6;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.user-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.user-email {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-role {
-  font-size: 11px;
-  color: #6b7280;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .btn-logout {
   width: 100%;
-  padding: 10px;
-  background: transparent;
+  padding: 12px 16px;
+  background: rgba(220, 38, 38, 0.1);
   color: #ef4444;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.2);
   border-radius: 8px;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-logout:hover {
-  background: #fee2e2;
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .admin-main {

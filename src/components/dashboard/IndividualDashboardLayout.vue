@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { signOut, user } from '../../stores/auth'
 
@@ -9,10 +9,30 @@ const router = useRouter()
 const mobileMenuOpen = ref(false)
 
 const menuItems = [
-  { name: 'individual-dashboard' as const, label: 'Tableau de bord', icon: '📊' },
-  { name: 'individual-profile' as const, label: 'Mon profil', icon: '👤' },
-  { name: 'individual-quotes' as const, label: 'Mes demandes de devis', icon: '📋' },
+  { name: 'individual-dashboard' as const, label: 'Tableau de bord', icon: '📊', badge: null },
+  { name: 'individual-quotes' as const, label: 'Mes demandes de devis', icon: '📋', badge: null }
 ]
+
+const profilItems = [
+  { name: 'individual-profile' as const, label: 'Mon profil', icon: '👤' }
+]
+
+const userInitials = computed(() => {
+  const email = user.value?.email || ''
+  const parts = email.split('@')[0].split('.')
+  if (parts.length > 1) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return email.substring(0, 2).toUpperCase()
+})
+
+const userName = computed(() => {
+  const email = user.value?.email || ''
+  const name = email.split('@')[0]
+  return name.split('.').map(part =>
+    part.charAt(0).toUpperCase() + part.slice(1)
+  ).join(' ')
+})
 
 async function handleSignOut() {
   await signOut()
@@ -23,11 +43,18 @@ async function handleSignOut() {
 <template>
   <div class="dashboard-layout">
     <aside class="sidebar" :class="{ 'mobile-open': mobileMenuOpen }">
+      <button class="close-mobile-menu" @click="mobileMenuOpen = false">✕</button>
+
       <div class="sidebar-header">
-        <router-link to="/" class="sidebar-brand">
-          <span class="logo-text">Porte à <span class="logo-pro">Pro</span></span>
-        </router-link>
-        <button class="close-mobile-menu" @click="mobileMenuOpen = false">✕</button>
+        <div class="user-avatar">{{ userInitials }}</div>
+        <h2 class="user-name">{{ userName }}</h2>
+        <div class="user-role">
+          <svg class="role-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          Particulier
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -41,18 +68,27 @@ async function handleSignOut() {
         >
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
+          <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
+        </router-link>
+
+        <div class="nav-section">PROFIL</div>
+
+        <router-link
+          v-for="item in profilItems"
+          :key="item.name"
+          :to="{ name: item.name }"
+          class="nav-item"
+          :class="{ active: route.name === item.name }"
+          @click="mobileMenuOpen = false"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
         </router-link>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="user-avatar">{{ user?.email?.[0].toUpperCase() }}</div>
-          <div class="user-details">
-            <div class="user-email">{{ user?.email }}</div>
-          </div>
-        </div>
         <button class="btn-signout" @click="handleSignOut">
-          <span>🚪</span> Déconnexion
+          Déconnexion
         </button>
       </div>
     </aside>
@@ -63,7 +99,7 @@ async function handleSignOut() {
           ☰
         </button>
         <h1 class="page-title">
-          {{ menuItems.find(item => item.name === route.name)?.label || 'Dashboard' }}
+          {{ menuItems.find(item => item.name === route.name)?.label || profilItems.find(item => item.name === route.name)?.label || 'Dashboard' }}
         </h1>
       </header>
 
@@ -84,13 +120,12 @@ async function handleSignOut() {
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #f9fafb;
+  background: #f5f5f5;
 }
 
 .sidebar {
   width: 280px;
-  background: white;
-  border-right: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #1a1d2e 0%, #0f1117 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -99,54 +134,80 @@ async function handleSignOut() {
   bottom: 0;
   z-index: 100;
   transition: transform 0.3s;
-}
-
-.sidebar-header {
-  padding: 24px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 700;
-  font-size: 20px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  text-decoration: none;
-  color: #111827;
-}
-
-.sidebar-brand:hover {
-  opacity: 0.7;
-}
-
-.logo-text {
-  color: #111827;
-}
-
-.logo-pro {
-  color: #ea580c;
+  border-radius: 0 16px 16px 0;
 }
 
 .close-mobile-menu {
   display: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
   background: none;
   border: none;
   font-size: 24px;
   color: #6b7280;
   cursor: pointer;
   padding: 8px;
+  z-index: 101;
+}
+
+.sidebar-header {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.user-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.user-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.user-role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.role-icon {
+  opacity: 0.7;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 16px 12px;
+  padding: 24px 16px;
   overflow-y: auto;
+}
+
+.nav-section {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 24px 0 12px 12px;
 }
 
 .nav-item {
@@ -159,90 +220,73 @@ async function handleSignOut() {
   border: none;
   border-radius: 8px;
   font-size: 15px;
-  font-weight: 500;
-  color: #374151;
+  font-weight: 400;
+  color: #9ca3af;
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 4px;
   text-align: left;
   text-decoration: none;
+  position: relative;
+  border-left: 3px solid transparent;
 }
 
 .nav-item:hover {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
 }
 
 .nav-item.active {
-  background: #dbeafe;
-  color: #2563eb;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-weight: 500;
+  border-left-color: #10b981;
 }
 
 .nav-icon {
-  font-size: 20px;
+  font-size: 18px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.nav-badge {
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
 }
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #2563eb;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.user-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-email {
-  font-size: 13px;
-  color: #374151;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .btn-signout {
   width: 100%;
-  padding: 10px 16px;
-  background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  padding: 12px 16px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(220, 38, 38, 0.2);
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
 .btn-signout:hover {
-  background: #fef2f2;
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .main-content {
@@ -291,6 +335,7 @@ async function handleSignOut() {
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
+    border-radius: 0;
   }
 
   .sidebar.mobile-open {
