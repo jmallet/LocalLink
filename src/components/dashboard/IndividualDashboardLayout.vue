@@ -25,8 +25,7 @@ async function handleSignOut() {
     <aside class="sidebar" :class="{ 'mobile-open': mobileMenuOpen }">
       <div class="sidebar-header">
         <router-link to="/" class="sidebar-brand">
-          <span class="logo-icon">🏪</span>
-          <span class="logo-text">LocalLink</span>
+          <span class="logo-text">Porte à <span class="logo-pro">Pro</span></span>
         </router-link>
         <button class="close-mobile-menu" @click="mobileMenuOpen = false">✕</button>
       </div>
@@ -126,8 +125,12 @@ async function handleSignOut() {
   opacity: 0.7;
 }
 
-.logo-icon {
-  font-size: 24px;
+.logo-text {
+  color: #111827;
+}
+
+.logo-pro {
+  color: #ea580c;
 }
 
 .close-mobile-menu {

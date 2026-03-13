@@ -26,8 +26,7 @@ const handleNavigate = (page: 'home' | 'about' | 'pros-locaux') => {
   <nav class="navbar">
     <div class="nav-container">
       <div class="nav-brand">
-        <span class="logo-icon">🏪</span>
-        <span class="logo-text">LocalLink</span>
+        <span class="logo-text">Porte à <span class="logo-pro">Pro</span></span>
       </div>
 
       <div class="nav-links" :class="{ 'mobile-open': mobileMenuOpen }">
@@ -77,8 +76,12 @@ const handleNavigate = (page: 'home' | 'about' | 'pros-locaux') => {
   color: #111827;
 }
 
-.logo-icon {
-  font-size: 28px;
+.logo-text {
+  color: #111827;
+}
+
+.logo-pro {
+  color: #ea580c;
 }
 
 .nav-links {

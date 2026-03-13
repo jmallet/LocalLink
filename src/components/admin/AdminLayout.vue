@@ -67,9 +67,8 @@ async function handleSignOut() {
     <aside class="admin-sidebar">
       <div class="sidebar-header">
         <router-link to="/" class="brand">
-          <span class="brand-icon">🏪</span>
           <div class="brand-text">
-            <h1>LocalLink</h1>
+            <h1>Porte à <span class="brand-pro">Pro</span></h1>
             <span class="badge-admin">Admin</span>
           </div>
         </router-link>
@@ -181,15 +180,15 @@ async function handleSignOut() {
   opacity: 0.8;
 }
 
-.brand-icon {
-  font-size: 32px;
-}
-
 .brand-text h1 {
   font-size: 20px;
   font-weight: 800;
   color: #111827;
   margin: 0 0 4px 0;
+}
+
+.brand-pro {
+  color: #ea580c;
 }
 
 .badge-admin {

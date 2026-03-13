@@ -57,7 +57,7 @@ async function handleSubmit() {
               <span class="info-icon">📧</span>
               <div>
                 <h3>Email</h3>
-                <a href="mailto:contact@locallink.fr">contact@locallink.fr</a>
+                <a href="mailto:contact@porteapro.fr">contact@porteapro.fr</a>
               </div>
             </div>
 
