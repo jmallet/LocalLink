@@ -1,15 +1,26 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { isAuthenticated } from '../../stores/auth'
+import { isAuthenticated, isParticulier, profile } from '../../stores/auth'
+import IndividualSignupModal from '../auth/IndividualSignupModal.vue'
 
 const router = useRouter()
+const showIndividualSignup = ref(false)
 
 function navigateToRequestQuote() {
   if (isAuthenticated.value) {
-    router.push({ name: 'individual-new-quote' })
+    if (isParticulier.value || profile.value?.user_type === 'ADMIN') {
+      router.push({ name: 'individual-new-quote' })
+    } else {
+      alert('Cette fonctionnalité est réservée aux particuliers. Veuillez créer un compte particulier.')
+    }
   } else {
-    router.push({ name: 'login' })
+    showIndividualSignup.value = true
   }
+}
+
+function closeIndividualSignup() {
+  showIndividualSignup.value = false
 }
 
 function navigateToFindPro() {
@@ -27,6 +38,10 @@ function navigateToProSpace() {
 
 <template>
   <div class="home-page">
+    <IndividualSignupModal
+      v-if="showIndividualSignup"
+      @close="closeIndividualSignup"
+    />
     <section class="hero">
       <div class="hero-content">
         <div class="hero-badge">
