@@ -215,8 +215,7 @@ const router = createRouter({
       component: IndividualNewQuotePage,
       meta: {
         title: 'Nouvelle demande de devis - LocalLink',
-        requiresAuth: true,
-        requiresIndividual: true
+        requiresAuth: true
       }
     },
     {

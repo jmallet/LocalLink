@@ -9,11 +9,7 @@ const showIndividualSignup = ref(false)
 
 function navigateToRequestQuote() {
   if (isAuthenticated.value) {
-    if (isParticulier.value || profile.value?.user_type === 'ADMIN') {
-      router.push({ name: 'individual-new-quote' })
-    } else {
-      alert('Cette fonctionnalité est réservée aux particuliers. Veuillez créer un compte particulier.')
-    }
+    router.push({ name: 'individual-new-quote' })
   } else {
     showIndividualSignup.value = true
   }
